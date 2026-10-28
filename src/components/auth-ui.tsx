@@ -1,22 +1,26 @@
-import type { FormEventHandler, ReactNode } from "react";
+import type { FormEventHandler, ReactNode, Ref } from "react";
 
-export const fieldClass =
-  "w-full border-b border-line bg-transparent pb-3 text-base text-fg outline-none transition-colors placeholder:text-fg focus:border-primary";
-
-export function AuthCard({ onSubmit, children }: { onSubmit: FormEventHandler<HTMLFormElement>; children: ReactNode }) {
+export function AuthCard({ onSubmit, formRef, children }: { onSubmit: FormEventHandler<HTMLFormElement>; formRef?: Ref<HTMLFormElement>; children: ReactNode }) {
   return (
-    <form onSubmit={onSubmit} className="w-full max-w-[520px] rounded-xl bg-surface-strong p-8 shadow-card backdrop-blur-sm sm:p-10">
+    <form ref={formRef} noValidate onSubmit={onSubmit} className="w-full max-w-[520px] rounded-xl bg-surface-strong p-8 shadow-card backdrop-blur-sm sm:p-10">
       {children}
     </form>
   );
 }
 
+/** Form-level error. The space is always reserved so the button below never jumps. */
 export function FormError({ message }: { message: string | null }) {
-  if (!message) return null;
-  return <p role="alert" className="mt-6 rounded-md bg-danger/15 px-3 py-2 text-sm text-danger">{message}</p>;
+  return (
+    <div className="mt-4 min-h-12" aria-live="assertive">
+      {message && <p role="alert" className="rounded-md bg-danger/15 px-3 py-2 text-sm text-danger">{message}</p>}
+    </div>
+  );
 }
 
 export function FormNotice({ message }: { message: string | null }) {
-  if (!message) return null;
-  return <p role="status" className="mt-6 rounded-md bg-primary-soft px-3 py-2 text-sm">{message}</p>;
+  return (
+    <div className="mt-4 min-h-12" aria-live="polite">
+      {message && <p role="status" className="rounded-md bg-primary-soft px-3 py-2 text-sm">{message}</p>}
+    </div>
+  );
 }

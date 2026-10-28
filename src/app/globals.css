@@ -76,3 +76,25 @@ body {
   margin-inline: auto;
   padding-inline: 1.25rem;
 }
+
+/* Keep browser autofill from painting inputs light blue on the themed card. */
+input:-webkit-autofill,
+input:-webkit-autofill:hover,
+input:-webkit-autofill:focus {
+  -webkit-text-fill-color: var(--fg);
+  caret-color: var(--fg);
+  transition: background-color 9999s ease-in-out 0s;
+}
+
+/* Tailwind v4 resets buttons to the default cursor; restore the pointer on interactive elements. */
+@layer base {
+  button:not(:disabled),
+  [role="button"]:not([aria-disabled="true"]),
+  select:not(:disabled),
+  summary,
+  label[for],
+  input[type="checkbox"]:not(:disabled),
+  input[type="radio"]:not(:disabled) {
+    cursor: pointer;
+  }
+}

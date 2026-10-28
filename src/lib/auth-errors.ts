@@ -11,11 +11,29 @@ const messages: Record<string, string> = {
   "auth/account-exists-with-different-credential": "An account already exists with this email using a different sign-in method.",
 };
 
+// Errors that belong to a specific input rather than the whole form.
+const fields: Record<string, "email" | "password"> = {
+  "auth/invalid-email": "email",
+  "auth/user-not-found": "email",
+  "auth/email-already-in-use": "email",
+  "auth/invalid-credential": "password",
+  "auth/wrong-password": "password",
+  "auth/weak-password": "password",
+};
+
 const ignored = new Set(["auth/popup-closed-by-user", "auth/cancelled-popup-request"]);
+
+const codeOf = (err: unknown) =>
+  typeof err === "object" && err && "code" in err ? String((err as { code: unknown }).code) : "";
 
 /** Returns a user-facing message, or null when the error should be silently ignored. */
 export function authErrorMessage(err: unknown): string | null {
-  const code = typeof err === "object" && err && "code" in err ? String((err as { code: unknown }).code) : "";
+  const code = codeOf(err);
   if (ignored.has(code)) return null;
   return messages[code] ?? "Something went wrong. Please try again.";
+}
+
+/** The input an error should be attached to, or null for a form-level error. */
+export function authErrorField(err: unknown): "email" | "password" | null {
+  return fields[codeOf(err)] ?? null;
 }

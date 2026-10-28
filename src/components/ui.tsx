@@ -1,3 +1,4 @@
+import Link from "next/link";
 import type { ReactNode } from "react";
 
 export function Art({ hue, className = "", children }: { hue: [string, string]; className?: string; children?: ReactNode }) {
@@ -11,16 +12,44 @@ export function Art({ hue, className = "", children }: { hue: [string, string]; 
   );
 }
 
-export function Button({
-  children, variant = "primary", className = "", ...rest
-}: { variant?: "primary" | "ghost" | "outline" } & React.ButtonHTMLAttributes<HTMLButtonElement>) {
-  const styles = {
-    primary: "bg-primary text-primary-fg hover:bg-primary-hover",
-    ghost: "bg-surface-strong text-fg hover:bg-primary-soft",
-    outline: "border border-primary text-accent hover:bg-primary-soft",
-  }[variant];
+export function Spinner({ className = "" }: { className?: string }) {
   return (
-    <button {...rest} className={`rounded-md px-4 py-2 text-xs font-medium transition-colors ${styles} ${className}`}>
+    <svg className={`h-4 w-4 animate-spin ${className}`} viewBox="0 0 24 24" fill="none" aria-hidden>
+      <circle cx="12" cy="12" r="9" stroke="currentColor" strokeWidth="3" opacity=".25" />
+      <path d="M21 12a9 9 0 0 0-9-9" stroke="currentColor" strokeWidth="3" strokeLinecap="round" />
+    </svg>
+  );
+}
+
+const variantStyles = {
+  primary: "bg-primary text-primary-fg hover:bg-primary-hover",
+  ghost: "bg-surface-strong text-fg hover:bg-primary-soft",
+  outline: "border border-primary text-accent hover:bg-primary-soft",
+};
+
+/** A link that looks like a Button, for navigation. */
+export function ButtonLink({
+  href, children, variant = "primary", className = "",
+}: { href: string; children: ReactNode; variant?: keyof typeof variantStyles; className?: string }) {
+  return (
+    <Link href={href} className={`inline-flex items-center justify-center rounded-md px-4 py-2 text-xs font-medium transition-colors ${variantStyles[variant]} ${className}`}>
+      {children}
+    </Link>
+  );
+}
+
+export function Button({
+  children, variant = "primary", className = "", loading = false, disabled, ...rest
+}: { variant?: "primary" | "ghost" | "outline"; loading?: boolean } & React.ButtonHTMLAttributes<HTMLButtonElement>) {
+  const styles = variantStyles[variant];
+  return (
+    <button
+      {...rest}
+      disabled={disabled || loading}
+      aria-busy={loading}
+      className={`inline-flex items-center justify-center gap-2 rounded-md px-4 py-2 text-xs font-medium transition-colors disabled:cursor-not-allowed disabled:opacity-60 ${styles} ${className}`}
+    >
+      {loading && <Spinner />}
       {children}
     </button>
   );

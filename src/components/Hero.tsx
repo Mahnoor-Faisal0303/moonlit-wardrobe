@@ -1,5 +1,5 @@
 import { brandLogos, stats } from "@/data/content";
-import { Art, Button } from "./ui";
+import { Art, Button, ButtonLink } from "./ui";
 
 const tiles: { hue: [string, string]; span: string }[] = [
   { hue: ["#e9e4f5", "#6b5fd0"], span: "" },
@@ -22,7 +22,7 @@ export default function Hero() {
         <div>
           <h1 className="text-3xl font-semibold leading-tight md:text-4xl">Clothes are the<br />Spirit of Fashion</h1>
           <p className="mt-4 max-w-sm text-[11px] text-muted">Lorem ipsum dolor sit amet, consectetur adipiscing elit. Nunc vulputate libero et velit.</p>
-          <div className="mt-5 flex gap-3"><Button>Explore Now</Button><Button variant="ghost">Create</Button></div>
+          <div className="mt-5 flex gap-3"><ButtonLink href="/explore">Explore Now</ButtonLink><Button variant="ghost">Create</Button></div>
           <dl className="mt-8 flex gap-8">
             {stats.map((s) => (
               <div key={s.label}><dt className="text-lg font-semibold">{s.value}</dt><dd className="text-[10px] text-subtle">{s.label}</dd></div>
