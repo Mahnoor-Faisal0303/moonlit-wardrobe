@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useState } from "react";
 import { moreLinks, navLinks } from "@/data/content";
 import ThemeToggle from "./ThemeToggle";
+import UserMenu from "./UserMenu";
 import { Button } from "./ui";
 
 const hrefFor = (l: string) => (l === "Home" ? "/" : l === "Explore" ? "/explore" : "#");
@@ -35,7 +36,7 @@ export default function Navbar() {
           <ThemeToggle />
           <span className="hidden gap-3 text-muted sm:flex" aria-hidden><span>🔔</span><span>💬</span></span>
           <Button variant="outline" className="!border-line !py-1.5 !text-fg">Wallet</Button>
-          <span className="h-7 w-7 rounded-full bg-gradient-to-br from-accent to-primary" />
+          <UserMenu />
           <button className="lg:hidden" onClick={() => setOpen(!open)} aria-label="Menu">☰</button>
         </div>
       </div>
