@@ -1,24 +1,25 @@
 import Image from "next/image";
 import Link from "next/link";
-import { getDiscountPercent } from "@/data/content";
+import { getDiscountPercent, PLACEHOLDER_IMAGE } from "@/data/content";
 import { Verified } from "./ui";
 
 type ExploreCardProps = {
-  id: number;
+  id: string;
   name: string;
   category: string;
   price: string;
   discountedPrice?: string;
   description: string;
+  images?: string[];
 };
 
-export default function ExploreCard({ id, name, category, price, discountedPrice, description }: ExploreCardProps) {
+export default function ExploreCard({ id, name, category, price, discountedPrice, description, images }: ExploreCardProps) {
   const discountPercent = getDiscountPercent(price, discountedPrice);
   return (
     <Link href={`/explore/${id}`} className="block">
     <article className="cursor-pointer overflow-hidden rounded-lg border border-line bg-surface shadow-card transition-all duration-300 ease-out hover:z-10 hover:scale-105 hover:border-primary hover:shadow-2xl">
       <div className="relative aspect-[624/756]">
-        <Image src="/items/suit.png" alt={name} fill sizes="(min-width: 1024px) 33vw, (min-width: 640px) 50vw, 100vw" className="object-cover object-top" />
+        <Image src={images?.[0] ?? PLACEHOLDER_IMAGE} alt={name} fill sizes="(min-width: 1024px) 33vw, (min-width: 640px) 50vw, 100vw" className="object-cover object-top" />
       </div>
       <div className="relative flex flex-col items-center px-6 pb-6 text-center">
         <h3 className="mt-5 flex items-center gap-2 text-base font-semibold text-fg">{name} <Verified /></h3>

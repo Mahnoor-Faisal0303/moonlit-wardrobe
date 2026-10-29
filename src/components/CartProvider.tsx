@@ -2,14 +2,14 @@
 
 import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from "react";
 
-export type CartLine = { id: number; qty: number };
+export type CartLine = { id: string; qty: number };
 
 type CartContextValue = {
   lines: CartLine[];
   count: number;
-  add: (id: number) => void;
-  setQty: (id: number, qty: number) => void;
-  remove: (id: number) => void;
+  add: (id: string) => void;
+  setQty: (id: string, qty: number) => void;
+  remove: (id: string) => void;
   clear: () => void;
 };
 
@@ -23,7 +23,7 @@ export function CartProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     try {
       const saved = localStorage.getItem(STORAGE_KEY);
-      if (saved) setLines(JSON.parse(saved));
+      if (saved) setLines((JSON.parse(saved) as CartLine[]).map((l) => ({ ...l, id: String(l.id) })));
     } catch {}
     setLoaded(true);
   }, []);
@@ -35,7 +35,7 @@ export function CartProvider({ children }: { children: ReactNode }) {
     } catch {}
   }, [lines, loaded]);
 
-  const add = useCallback((id: number) => {
+  const add = useCallback((id: string) => {
     setLines((prev) =>
       prev.some((l) => l.id === id)
         ? prev.map((l) => (l.id === id ? { ...l, qty: l.qty + 1 } : l))
@@ -43,11 +43,11 @@ export function CartProvider({ children }: { children: ReactNode }) {
     );
   }, []);
 
-  const setQty = useCallback((id: number, qty: number) => {
+  const setQty = useCallback((id: string, qty: number) => {
     setLines((prev) => (qty < 1 ? prev.filter((l) => l.id !== id) : prev.map((l) => (l.id === id ? { ...l, qty } : l))));
   }, []);
 
-  const remove = useCallback((id: number) => setLines((prev) => prev.filter((l) => l.id !== id)), []);
+  const remove = useCallback((id: string) => setLines((prev) => prev.filter((l) => l.id !== id)), []);
   const clear = useCallback(() => setLines([]), []);
 
   const value = useMemo(

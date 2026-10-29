@@ -1,12 +1,9 @@
-import Image from "next/image";
-import { exploreCards, exploreTabs } from "@/data/content";
-import { ButtonLink } from "./ui";
+"use client";
 
-const stats = [
-  { value: `${exploreCards.length}+`, label: "Designs" },
-  { value: String(exploreTabs.length), label: "Collections" },
-  { value: "3–5 days", label: "Delivery" },
-];
+import Image from "next/image";
+import { exploreTabs } from "@/data/content";
+import { useItems } from "./ItemsProvider";
+import { ButtonLink } from "./ui";
 
 const photos = [
   { fit: "object-cover object-top", span: "row-span-2" },
@@ -15,6 +12,12 @@ const photos = [
 ];
 
 export default function Hero() {
+  const { items } = useItems();
+  const stats = [
+    { value: `${items.length}+`, label: "Designs" },
+    { value: String(exploreTabs.length), label: "Collections" },
+    { value: "3–5 days", label: "Delivery" },
+  ];
   return (
     <section className="container-x pt-12 pb-12">
       <div className="grid items-center gap-10 lg:grid-cols-2">

@@ -5,7 +5,7 @@ import { useEffect, useState } from "react";
 import { useCart } from "./CartProvider";
 import { Button } from "./ui";
 
-export default function AddToBagButton({ id }: { id: number }) {
+export default function AddToBagButton({ id }: { id: string }) {
   const { add } = useCart();
   const [added, setAdded] = useState(false);
 

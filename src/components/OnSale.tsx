@@ -1,9 +1,12 @@
-import { exploreCards } from "@/data/content";
+"use client";
+
+import { useItems } from "./ItemsProvider";
 import ExploreCard from "./ExploreCard";
 import { ButtonLink, SectionTitle } from "./ui";
 
 export default function OnSale() {
-  const sale = exploreCards.filter((c) => c.discountedPrice);
+  const { items } = useItems();
+  const sale = items.filter((c) => c.discountedPrice);
   return (
     <section id="sale" className="container-x scroll-mt-20 py-12">
       <SectionTitle title="On Sale" subtitle="Limited-time prices on our favourite pieces." />

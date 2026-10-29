@@ -2,15 +2,17 @@
 
 import Link from "next/link";
 import { useState } from "react";
-import { exploreCards, exploreTabs } from "@/data/content";
+import { exploreTabs } from "@/data/content";
 import ExploreCard from "./ExploreCard";
+import { useItems } from "./ItemsProvider";
 
 export default function ExploreGrid({ initialCategory = "3PC", query = "" }: { initialCategory?: string; query?: string }) {
+  const { items } = useItems();
   const [tab, setTab] = useState(Math.max(0, exploreTabs.indexOf(initialCategory)));
   const term = query.trim().toLowerCase();
 
   if (term) {
-    const results = exploreCards.filter((c) =>
+    const results = items.filter((c) =>
       [c.name, c.category, c.description].some((f) => f.toLowerCase().includes(term)),
     );
     return (
@@ -32,7 +34,7 @@ export default function ExploreGrid({ initialCategory = "3PC", query = "" }: { i
     );
   }
 
-  const visibleCards = exploreCards.filter((c) => c.category === exploreTabs[tab]);
+  const visibleCards = items.filter((c) => c.category === exploreTabs[tab]);
   return (
     <>
       <div className="mt-14 grid grid-cols-2 gap-3 md:grid-cols-6">

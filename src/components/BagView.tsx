@@ -2,7 +2,8 @@
 
 import Image from "next/image";
 import Link from "next/link";
-import { exploreCards, priceToNumber } from "@/data/content";
+import { PLACEHOLDER_IMAGE, priceToNumber } from "@/data/content";
+import { useItems } from "./ItemsProvider";
 import { useCart } from "./CartProvider";
 import { Button, ButtonLink } from "./ui";
 
@@ -10,12 +11,17 @@ const formatRs = (n: number) => `Rs. ${n.toLocaleString("en-US")}`;
 
 export default function BagView() {
   const { lines, setQty, remove, clear } = useCart();
+  const { items: catalog, loaded } = useItems();
 
   const items = lines.flatMap((l) => {
-    const card = exploreCards.find((c) => c.id === l.id);
+    const card = catalog.find((c) => c.id === l.id);
     return card ? [{ card, qty: l.qty, unit: priceToNumber(card.discountedPrice ?? card.price) }] : [];
   });
   const subtotal = items.reduce((sum, i) => sum + i.unit * i.qty, 0);
+
+  if (!loaded && lines.length > 0 && items.length === 0) {
+    return <div className="mt-10 h-48 animate-pulse rounded-lg bg-surface-strong" aria-busy />;
+  }
 
   if (items.length === 0) {
     return (
@@ -32,7 +38,7 @@ export default function BagView() {
         {items.map(({ card, qty, unit }) => (
           <li key={card.id} className="flex gap-4 p-4">
             <Link href={`/explore/${card.id}`} className="relative h-28 w-20 shrink-0 overflow-hidden rounded bg-surface-strong">
-              <Image src="/items/suit.png" alt={card.name} fill sizes="80px" className="object-cover object-top" />
+              <Image src={card.images[0] ?? PLACEHOLDER_IMAGE} alt={card.name} fill sizes="80px" className="object-cover object-top" />
             </Link>
             <div className="flex flex-1 flex-col">
               <Link href={`/explore/${card.id}`} className="text-sm font-semibold uppercase tracking-wide text-fg hover:text-accent">{card.name}</Link>
