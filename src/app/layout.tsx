@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Poppins } from "next/font/google";
 import AuthProvider from "@/components/AuthProvider";
+import { CartProvider } from "@/components/CartProvider";
 import "./globals.css";
 
 const poppins = Poppins({
@@ -11,7 +12,7 @@ const poppins = Poppins({
 
 export const metadata: Metadata = {
   title: "Moonlit Wardrobe — Fashion Marketplace",
-  description: "Clothes are the spirit of fashion. Discover digital fashion collections, creators and brands.",
+  description: "Clothes are the spirit of fashion. Shop unstitched suits, casual wear and formal outfits.",
 };
 
 const themeScript = `try{var t=localStorage.getItem('theme');if(t)document.documentElement.dataset.theme=t}catch(e){}`;
@@ -22,7 +23,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
       <head>
         <script dangerouslySetInnerHTML={{ __html: themeScript }} />
       </head>
-      <body className="min-h-full flex flex-col"><AuthProvider>{children}</AuthProvider></body>
+      <body className="min-h-full flex flex-col"><AuthProvider><CartProvider>{children}</CartProvider></AuthProvider></body>
     </html>
   );
 }

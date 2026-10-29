@@ -1,25 +1,38 @@
-import { Art, Verified } from "./ui";
+import Image from "next/image";
+import Link from "next/link";
+import { getDiscountPercent } from "@/data/content";
+import { Verified } from "./ui";
 
-export function EthIcon() {
-  return (
-    <svg width="14" height="18" viewBox="0 0 24 32" fill="currentColor" aria-hidden>
-      <path d="M12 0 3 16l9 5.3L21 16 12 0Zm0 23.5-9-5.3L12 32l9-13.8-9 5.3Z" />
-    </svg>
-  );
-}
+type ExploreCardProps = {
+  id: number;
+  name: string;
+  category: string;
+  price: string;
+  discountedPrice?: string;
+  description: string;
+};
 
-export default function ExploreCard({ banner, avatar }: { banner: [string, string]; avatar: [string, string] }) {
+export default function ExploreCard({ id, name, category, price, discountedPrice, description }: ExploreCardProps) {
+  const discountPercent = getDiscountPercent(price, discountedPrice);
   return (
-    <article className="overflow-hidden rounded-lg border border-line bg-surface shadow-card">
-      <Art hue={banner} className="h-44 sm:h-48" />
+    <Link href={`/explore/${id}`} className="block">
+    <article className="cursor-pointer overflow-hidden rounded-lg border border-line bg-surface shadow-card transition-all duration-300 ease-out hover:z-10 hover:scale-105 hover:border-primary hover:shadow-2xl">
+      <div className="relative aspect-[624/756]">
+        <Image src="/items/suit.png" alt={name} fill sizes="(min-width: 1024px) 33vw, (min-width: 640px) 50vw, 100vw" className="object-cover object-top" />
+      </div>
       <div className="relative flex flex-col items-center px-6 pb-6 text-center">
-        <Art hue={avatar} className="-mt-10 h-20 w-20 rounded-full border-2 border-base" />
-        <h3 className="mt-3 flex items-center gap-2 text-base font-semibold">John Wick <Verified /></h3>
-        <p className="mt-4 text-[11px] leading-6 text-muted">
-          Lorem ipsum dolor sit amet, consectetur adipiscing elit. Ac tempus nisi, mollis diam vulputate nec. Donec fringilla nunc cursus nulla id leo felis fringilla est.
-        </p>
-        <span className="mt-4 self-start text-accent"><EthIcon /></span>
+        <h3 className="mt-5 flex items-center gap-2 text-base font-semibold text-fg">{name} <Verified /></h3>
+        <span className="mt-2 rounded-full bg-primary-soft px-3 py-0.5 text-[11px] font-medium text-accent">{category}</span>
+        <p className="mt-4 text-xs leading-6 text-fg/80">{description}</p>
+        <div className="mt-4 flex items-baseline gap-2 self-start">
+          <span className="text-sm font-semibold text-accent">Rs. {discountedPrice ?? price}</span>
+          {discountedPrice && <span className="text-xs text-muted line-through">Rs. {price}</span>}
+          {discountPercent > 0 && (
+            <span className="rounded bg-danger/15 px-1.5 py-0.5 text-[10px] font-semibold text-danger">{discountPercent}% OFF</span>
+          )}
+        </div>
       </div>
     </article>
+    </Link>
   );
 }

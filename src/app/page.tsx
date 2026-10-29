@@ -1,11 +1,11 @@
 import About from "@/components/About";
 import Collection from "@/components/Collection";
 import Faq from "@/components/Faq";
+import Features from "@/components/Features";
 import Footer, { Cta } from "@/components/Footer";
 import Hero from "@/components/Hero";
 import Navbar from "@/components/Navbar";
-import { Brands, Creators } from "@/components/Profiles";
-import Trending from "@/components/Trending";
+import OnSale from "@/components/OnSale";
 
 export default function Home() {
   return (
@@ -13,11 +13,10 @@ export default function Home() {
       <Navbar />
       <main>
         <Hero />
-        <About />
+        <Features />
         <Collection />
-        <Trending />
-        <Creators />
-        <Brands />
+        <OnSale />
+        <About />
         <Faq />
         <Cta />
       </main>

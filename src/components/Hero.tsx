@@ -1,40 +1,49 @@
-import { brandLogos, stats } from "@/data/content";
-import { Art, Button, ButtonLink } from "./ui";
+import Image from "next/image";
+import { exploreCards, exploreTabs } from "@/data/content";
+import { ButtonLink } from "./ui";
 
-const tiles: { hue: [string, string]; span: string }[] = [
-  { hue: ["#e9e4f5", "#6b5fd0"], span: "" },
-  { hue: ["#f2b84b", "#3b3b8a"], span: "" },
-  { hue: ["#1d2a44", "#05070f"], span: "row-span-2" },
-  { hue: ["#c9a66b", "#3b1d6b"], span: "col-start-4 row-span-3" },
-  { hue: ["#3a3a3a", "#0c0c0c"], span: "" },
-  { hue: ["#7c3aed", "#2a0f6b"], span: "" },
-  { hue: ["#4ade80", "#7c3aed"], span: "" },
+const stats = [
+  { value: `${exploreCards.length}+`, label: "Designs" },
+  { value: String(exploreTabs.length), label: "Collections" },
+  { value: "3–5 days", label: "Delivery" },
+];
+
+const photos = [
+  { fit: "object-cover object-top", span: "row-span-2" },
+  { fit: "scale-[1.8] object-cover object-top", span: "" },
+  { fit: "scale-[1.8] object-cover object-bottom", span: "" },
 ];
 
 export default function Hero() {
   return (
-    <section className="container-x pt-8 pb-12">
-      <div className="mb-10 flex justify-center gap-3">
-        <button className="rounded-full bg-primary-soft px-5 py-1.5 text-[11px] ring-1 ring-primary">Main Collection</button>
-        <button className="rounded-full bg-surface-strong px-5 py-1.5 text-[11px] text-muted">Creators Market</button>
-      </div>
+    <section className="container-x pt-12 pb-12">
       <div className="grid items-center gap-10 lg:grid-cols-2">
         <div>
-          <h1 className="text-3xl font-semibold leading-tight md:text-4xl">Clothes are the<br />Spirit of Fashion</h1>
-          <p className="mt-4 max-w-sm text-[11px] text-muted">Lorem ipsum dolor sit amet, consectetur adipiscing elit. Nunc vulputate libero et velit.</p>
-          <div className="mt-5 flex gap-3"><ButtonLink href="/explore">Explore Now</ButtonLink><Button variant="ghost">Create</Button></div>
-          <dl className="mt-8 flex gap-8">
+          <p className="text-[11px] font-medium uppercase tracking-[0.25em] text-accent">New season collection</p>
+          <h1 className="mt-3 text-3xl font-semibold leading-tight md:text-5xl">Dress in the<br />Spirit of Fashion</h1>
+          <p className="mt-4 max-w-sm text-xs leading-6 text-muted">
+            Unstitched suits, everyday casuals and statement formals. Find the outfit that suits your moment.
+          </p>
+          <div className="mt-6 flex gap-3">
+            <ButtonLink href="/explore">Shop Now</ButtonLink>
+            <ButtonLink href="/#sale" variant="outline">View Sale</ButtonLink>
+          </div>
+          <dl className="mt-10 flex gap-8">
             {stats.map((s) => (
-              <div key={s.label}><dt className="text-lg font-semibold">{s.value}</dt><dd className="text-[10px] text-subtle">{s.label}</dd></div>
+              <div key={s.label}>
+                <dt className="text-lg font-semibold">{s.value}</dt>
+                <dd className="text-[10px] text-subtle">{s.label}</dd>
+              </div>
             ))}
           </dl>
         </div>
-        <div className="grid h-72 grid-cols-4 grid-rows-3 gap-2.5 md:h-80">
-          {tiles.map((t, i) => <Art key={i} hue={t.hue} className={`rounded-lg ${t.span}`} />)}
+        <div className="grid h-96 grid-cols-2 grid-rows-2 gap-2.5 md:h-[28rem]">
+          {photos.map((p, i) => (
+            <div key={i} className={`relative overflow-hidden rounded-lg bg-surface-strong ${p.span}`}>
+              <Image src="/items/suit.png" alt="Printed three piece suit" fill priority={i === 0} sizes="(min-width: 1024px) 25vw, 50vw" className={p.fit} />
+            </div>
+          ))}
         </div>
-      </div>
-      <div className="mt-20 flex flex-wrap items-center justify-around gap-8 text-3xl font-bold tracking-wide text-subtle">
-        {brandLogos.map((b) => <span key={b} className="opacity-70">{b}</span>)}
       </div>
     </section>
   );
