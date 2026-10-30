@@ -3,16 +3,14 @@
 import { collection, doc, getDocs, serverTimestamp, writeBatch } from "firebase/firestore";
 import Image from "next/image";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useState, type FormEvent } from "react";
 import { DEFAULT_NOTE, exploreTabs, getDefaultPieces, SIZE_PRESETS, type Item } from "@/data/content";
-import { getDb, isFirebaseConfigured, NOT_CONFIGURED_MESSAGE } from "@/lib/firebase";
+import { getDb } from "@/lib/firebase";
 import { compressImage } from "@/lib/image-compress";
-import { useAuth } from "./AuthProvider";
+import AdminGate from "./AdminGate";
 import { SelectField, TextField } from "./fields";
 import { useItems } from "./ItemsProvider";
 import { Button } from "./ui";
-import { useIsAdmin } from "./useIsAdmin";
 
 // Photos are shrunk in the browser and stored in Firestore, so there is a per-item limit.
 const MAX_IMAGES = 4;
@@ -62,37 +60,19 @@ function validate(f: Form, files: File[]): string | null {
   return null;
 }
 
-function Notice({ children }: { children: React.ReactNode }) {
-  return <div className="mt-10 rounded-lg border border-line bg-surface p-10 text-center text-sm text-muted">{children}</div>;
-}
-
 export default function AdminPanel() {
-  const { user, loading: authLoading } = useAuth();
-  const { isAdmin, loading } = useIsAdmin();
-  const router = useRouter();
-
-  const checking = authLoading || loading;
-  const allowed = isFirebaseConfigured && !!user && isAdmin;
-
-  // Anyone who is not a signed-in admin is sent away; the page content is never rendered for them.
-  useEffect(() => {
-    if (!isFirebaseConfigured || checking) return;
-    if (!user) router.replace("/signin");
-    else if (!isAdmin) router.replace("/");
-  }, [checking, user, isAdmin, router]);
-
-  if (!isFirebaseConfigured) return <Notice>{NOT_CONFIGURED_MESSAGE}</Notice>;
-  if (checking || !allowed) return <div className="mt-10 h-64 animate-pulse rounded-lg bg-surface-strong" aria-busy />;
-
   return (
-    <>
-      <h1 className="text-3xl font-bold md:text-4xl">Admin</h1>
-      <p className="mt-2 text-sm text-muted">Add new items with their details and photos.</p>
-      <div className="mt-10 grid gap-10 lg:grid-cols-[minmax(0,1fr)_420px]">
-        <AddItemForm userId={user.userId} />
-        <ManageItems />
-      </div>
-    </>
+    <AdminGate>
+      {(userId) => (
+        <>
+          <p className="mt-4 text-sm text-muted">Add new items with their details and photos.</p>
+          <div className="mt-8 grid gap-10 lg:grid-cols-[minmax(0,1fr)_420px]">
+            <AddItemForm userId={userId} />
+            <ManageItems />
+          </div>
+        </>
+      )}
+    </AdminGate>
   );
 }
 

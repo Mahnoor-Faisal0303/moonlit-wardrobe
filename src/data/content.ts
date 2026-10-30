@@ -164,6 +164,8 @@ export const PLACEHOLDER_IMAGE = "/items/suit.png";
 
 export const formatPrice = (n: number) => n.toLocaleString("en-US");
 
+export const formatRs = (n: number) => `Rs. ${formatPrice(n)}`;
+
 export const staticItems: Item[] = rawItems.map((c, i) => ({
   id: String(i),
   ...c,

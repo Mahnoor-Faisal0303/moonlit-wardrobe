@@ -50,6 +50,35 @@ service cloud.firestore {
       }
     }
 
+    // Orders: anyone can place an order (cash on delivery only), signed in or as a guest.
+    // - One order can be opened by anyone who has its id (the tracking code, 20 random characters), so
+    //   guests can follow their order. Listing orders is limited to the owner and admins.
+    // - Admins can update an order's status. Nobody can delete an order.
+    match /orders/{orderId} {
+      allow get: if true;
+      allow list: if request.auth != null && (resource.data.userId == request.auth.uid || isAdmin());
+      allow create: if request.resource.data.keys().hasOnly(['userId', 'contact', 'shipping', 'notes', 'paymentMethod', 'items', 'subtotal', 'status', 'statusTimes', 'createdAt'])
+        && (request.resource.data.userId == null || (request.auth != null && request.resource.data.userId == request.auth.uid))
+        && request.resource.data.paymentMethod == 'cod'
+        && request.resource.data.status == 'pending'
+        && request.resource.data.contact.keys().hasOnly(['name', 'email', 'phone'])
+        && request.resource.data.contact.name is string && request.resource.data.contact.name.size() <= 50
+        && request.resource.data.contact.email is string && request.resource.data.contact.email.size() <= 100
+        && request.resource.data.contact.phone is string && request.resource.data.contact.phone.size() <= 20
+        && request.resource.data.shipping.keys().hasOnly(['address', 'city', 'postalCode'])
+        && request.resource.data.shipping.address is string && request.resource.data.shipping.address.size() <= 200
+        && request.resource.data.shipping.city is string && request.resource.data.shipping.city.size() <= 60
+        && request.resource.data.shipping.postalCode is string && request.resource.data.shipping.postalCode.size() <= 10
+        && request.resource.data.notes is string && request.resource.data.notes.size() <= 300
+        && request.resource.data.items is list && request.resource.data.items.size() >= 1 && request.resource.data.items.size() <= 50
+        && request.resource.data.subtotal is number && request.resource.data.subtotal >= 0
+        && request.resource.data.statusTimes.keys().hasOnly(['pending'])
+        && request.resource.data.statusTimes.pending == request.time
+        && request.resource.data.createdAt == request.time;
+      allow update: if isAdmin();
+      allow delete: if false;
+    }
+
     function isAdmin() {
       return request.auth != null
         && exists(/databases/$(database)/documents/admins/$(request.auth.uid));

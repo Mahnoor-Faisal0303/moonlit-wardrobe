@@ -2,12 +2,10 @@
 
 import Image from "next/image";
 import Link from "next/link";
-import { PLACEHOLDER_IMAGE, priceToNumber } from "@/data/content";
+import { formatRs, PLACEHOLDER_IMAGE, priceToNumber } from "@/data/content";
 import { useItems } from "./ItemsProvider";
 import { useCart } from "./CartProvider";
-import { Button, ButtonLink } from "./ui";
-
-const formatRs = (n: number) => `Rs. ${n.toLocaleString("en-US")}`;
+import { ButtonLink } from "./ui";
 
 export default function BagView() {
   const { lines, setQty, remove, clear } = useCart();
@@ -72,7 +70,7 @@ export default function BagView() {
           <span>Delivery</span>
           <span>Calculated at checkout</span>
         </div>
-        <Button className="mt-6 w-full !py-3">CHECKOUT</Button>
+        <ButtonLink href="/checkout" className="mt-6 w-full !py-3">CHECKOUT</ButtonLink>
         <button onClick={clear} className="mt-3 w-full text-xs text-muted hover:text-fg">Clear bag</button>
       </aside>
     </div>

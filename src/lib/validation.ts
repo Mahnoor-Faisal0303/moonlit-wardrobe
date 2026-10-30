@@ -6,6 +6,20 @@ export function validateEmail(value: string): string | null {
   return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value) ? null : "Please enter a valid email address.";
 }
 
+export function validatePhone(value: string): string | null {
+  if (!value) return "Please enter your phone number.";
+  const digits = value.replace(/\D/g, "").length;
+  if (!/^\+?[\d\s()-]+$/.test(value) || digits < 10 || digits > 15) return "Please enter a valid phone number, e.g. 0300 1234567.";
+  return null;
+}
+
+export function validateRequired(value: string, label: string, min: number, max: number): string | null {
+  if (!value) return `Please enter ${label}.`;
+  if (value.length < min) return `${label[0].toUpperCase()}${label.slice(1)} must be at least ${min} characters.`;
+  if (value.length > max) return `${label[0].toUpperCase()}${label.slice(1)} must be ${max} characters or fewer.`;
+  return null;
+}
+
 // Letters (any language), plus spaces, apostrophes and hyphens inside a name. No digits, no HTML characters.
 const NAME_PATTERN = /^\p{L}[\p{L}\p{M}\s'’-]*$/u;
 

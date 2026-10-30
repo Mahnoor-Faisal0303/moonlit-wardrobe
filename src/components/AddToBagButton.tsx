@@ -6,7 +6,7 @@ import { useCart } from "./CartProvider";
 import { Button } from "./ui";
 
 export default function AddToBagButton({ id, sizes = [] }: { id: string; sizes?: string[] }) {
-  const { add } = useCart();
+  const { add, openDrawer } = useCart();
   const [added, setAdded] = useState(false);
   const [size, setSize] = useState<string | null>(sizes.length === 1 ? sizes[0] : null);
   const [needSize, setNeedSize] = useState(false);
@@ -49,6 +49,7 @@ export default function AddToBagButton({ id, sizes = [] }: { id: string; sizes?:
           if (sizes.length > 0 && !size) return setNeedSize(true);
           add(id, size ?? undefined);
           setAdded(true);
+          openDrawer();
         }}
         className="w-full !py-4 text-sm font-semibold tracking-wider"
       >
