@@ -18,7 +18,7 @@ export async function compressImage(file: File, maxSide: number, maxChars: numbe
       ctx.imageSmoothingQuality = "high";
       ctx.drawImage(bitmap, 0, 0, canvas.width, canvas.height);
 
-      for (const quality of [0.9, 0.84, 0.78]) {
+      for (const quality of [0.94, 0.9, 0.85, 0.8]) {
         const dataUrl = canvas.toDataURL("image/jpeg", quality);
         if (dataUrl.length <= maxChars) return dataUrl;
       }

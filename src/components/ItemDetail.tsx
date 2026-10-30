@@ -7,7 +7,7 @@ import { getDiscountPercent, getItemDetails, PLACEHOLDER_IMAGE } from "@/data/co
 import { getDb, isFirebaseConfigured } from "@/lib/firebase";
 import AddToBagButton from "./AddToBagButton";
 import { useItems } from "./ItemsProvider";
-import ItemTabs from "./ItemTabs";
+import ItemDetails from "./ItemDetails";
 import { ButtonLink } from "./ui";
 
 export function ItemSkeleton() {
@@ -67,11 +67,10 @@ export default function ItemDetail({ id }: { id: string }) {
   }
 
   const discountPercent = getDiscountPercent(card.price, card.discountedPrice);
-  const { pieces } = getItemDetails(card);
+  const details = getItemDetails(card);
   const sku = card.custom
     ? `MW-${card.id.slice(0, 6).toUpperCase()}`
     : `MW${card.category.replace(/\s/g, "").toUpperCase()}${String(Number(card.id) + 1).padStart(3, "0")}`;
-  const label = `Unstitched ${pieces.length}-Piece`;
 
   const sources = gallery?.id === id ? gallery.urls : card.images;
   const photos = sources.length
@@ -102,7 +101,7 @@ export default function ItemDetail({ id }: { id: string }) {
 
         <AddToBagButton id={card.id} />
 
-        <ItemTabs pieces={pieces} description={card.description} label={label} />
+        <ItemDetails {...details} />
       </div>
     </div>
   );
