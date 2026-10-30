@@ -1,7 +1,6 @@
 import { getApp, getApps, initializeApp } from "firebase/app";
 import { getAuth } from "firebase/auth";
 import { getFirestore } from "firebase/firestore";
-import { getStorage } from "firebase/storage";
 
 const firebaseConfig = {
   apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY,
@@ -12,8 +11,13 @@ const firebaseConfig = {
   appId: process.env.NEXT_PUBLIC_FIREBASE_APP_ID,
 };
 
-const app = getApps().length ? getApp() : initializeApp(firebaseConfig);
+export const isFirebaseConfigured = Boolean(firebaseConfig.apiKey && firebaseConfig.projectId && firebaseConfig.appId);
 
-export const auth = getAuth(app);
-export const db = getFirestore(app);
-export const storage = getStorage(app);
+export const NOT_CONFIGURED_MESSAGE =
+  "Firebase is not configured. Add your NEXT_PUBLIC_FIREBASE_* values to .env.local and restart the dev server.";
+
+// Lazy getters: initializing with missing keys would throw during server rendering.
+const app = () => (getApps().length ? getApp() : initializeApp(firebaseConfig));
+
+export const getFirebaseAuth = () => getAuth(app());
+export const getDb = () => getFirestore(app());

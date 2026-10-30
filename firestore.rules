@@ -1,0 +1,58 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Each user can create and read only their own profile document.
+    match /users/{uid} {
+      allow read: if request.auth != null && request.auth.uid == uid;
+      allow create: if request.auth != null
+        && request.auth.uid == uid
+        && request.resource.data.keys().hasOnly(['email', 'firstName', 'lastName', 'birthdate', 'termsAcceptedAt', 'createdAt'])
+        && request.resource.data.firstName is string && request.resource.data.firstName.size() <= 50
+        && request.resource.data.lastName is string && request.resource.data.lastName.size() <= 50;
+      allow update, delete: if false;
+    }
+
+    // An admin is any user who has a document at admins/{uid}. These documents can only be created
+    // by hand in the Firebase console, so nobody can make themselves an admin from the app.
+    match /admins/{uid} {
+      allow read: if request.auth != null && request.auth.uid == uid;
+      allow write: if false;
+    }
+
+    // Items are public to read; only admins can add, edit or delete them.
+    match /items/{itemId} {
+      allow read: if true;
+      allow create: if isAdmin()
+        && request.resource.data.keys().hasOnly(['name', 'category', 'price', 'discountedPrice', 'fabric', 'colour', 'description', 'cover', 'photoCount', 'createdBy', 'createdAt'])
+        && request.resource.data.name is string && request.resource.data.name.size() > 0 && request.resource.data.name.size() <= 80
+        && request.resource.data.category in ['1PC', '2PC', '3PC', 'Casual', 'Semi Formal', 'Formal']
+        && request.resource.data.price is number && request.resource.data.price > 0
+        && request.resource.data.cover is string && request.resource.data.cover.size() <= 200000
+        && request.resource.data.photoCount is int && request.resource.data.photoCount >= 1 && request.resource.data.photoCount <= 4
+        && request.resource.data.createdBy == request.auth.uid;
+      allow update: if isAdmin();
+      allow delete: if isAdmin();
+
+      // Full-size photos (compressed data URLs) live beside the item so item lists stay small.
+      match /photos/{photoId} {
+        allow read: if true;
+        allow create: if isAdmin()
+          && request.resource.data.keys().hasOnly(['index', 'data'])
+          && request.resource.data.index is int
+          && request.resource.data.data is string && request.resource.data.data.size() <= 400000;
+        allow update: if false;
+        allow delete: if isAdmin();
+      }
+    }
+
+    function isAdmin() {
+      return request.auth != null
+        && exists(/databases/$(database)/documents/admins/$(request.auth.uid));
+    }
+
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}

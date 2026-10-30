@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 600 756" role="img" aria-label="Fabric detail in Emerald">
+<defs>
+<pattern id="pat" width="40" height="40" patternUnits="userSpaceOnUse" patternTransform="scale(2.6) rotate(-8)"><path d="M20 6 L30 20 L20 34 L10 20Z" fill="none" stroke="#84b6a4" stroke-width="1.6"/><circle cx="20" cy="20" r="2.2" fill="#84b6a4"/></pattern>
+<pattern id="weave" width="6" height="6" patternUnits="userSpaceOnUse"><path d="M0 3H6M3 0V6" stroke="#000" stroke-width=".6" opacity=".12"/></pattern>
+<linearGradient id="fold" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#000" stop-opacity=".3"/><stop offset=".3" stop-color="#fff" stop-opacity=".18"/><stop offset=".55" stop-color="#000" stop-opacity=".08"/><stop offset=".8" stop-color="#fff" stop-opacity=".14"/><stop offset="1" stop-color="#000" stop-opacity=".32"/></linearGradient>
+</defs>
+<rect width="600" height="756" fill="#1f7a5a"/>
+<rect width="600" height="756" fill="url(#pat)"/>
+<rect width="600" height="756" fill="url(#weave)"/>
+<rect width="600" height="756" fill="url(#fold)"/>
+</svg>
