@@ -1,3 +1,4 @@
+import Image from "next/image";
 import Link from "next/link";
 import { footerCols, socials, tagline } from "@/data/content";
 import { ButtonLink } from "./ui";
@@ -18,7 +19,10 @@ export default function Footer() {
     <footer className="mt-12 border-t border-line bg-footer">
       <div className="container-x grid gap-10 py-12 md:grid-cols-4">
         <div>
-          <span className="text-lg font-bold text-primary">Moonlit Wardrobe</span>
+          <div className="flex items-center gap-2">
+            <Image src="/ml_wardrobe_logo.svg" alt="" width={40} height={40} className="h-10 w-10" />
+            <span className="text-lg font-bold text-primary">Moonlit Wardrobe</span>
+          </div>
           <p className="mt-3 max-w-[14rem] text-[10px] text-muted">{tagline}</p>
         </div>
         {footerCols.map((c) => (
