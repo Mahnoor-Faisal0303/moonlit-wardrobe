@@ -4,22 +4,28 @@ import { collection, doc, getDocs, serverTimestamp, writeBatch } from "firebase/
 import Image from "next/image";
 import Link from "next/link";
 import { useEffect, useMemo, useState, type FormEvent } from "react";
-import { exploreTabs, type Item } from "@/data/content";
-import { getDb, isFirebaseConfigured, NOT_CONFIGURED_MESSAGE } from "@/lib/firebase";
+import { DEFAULT_NOTE, exploreTabs, getDefaultPieces, SIZE_PRESETS, type Item } from "@/data/content";
+import { getDb } from "@/lib/firebase";
 import { compressImage } from "@/lib/image-compress";
-import { useAuth } from "./AuthProvider";
+import AdminGate from "./AdminGate";
 import { SelectField, TextField } from "./fields";
 import { useItems } from "./ItemsProvider";
-import { Button, ButtonLink } from "./ui";
-import { useIsAdmin } from "./useIsAdmin";
+import { Button } from "./ui";
 
 // Photos are shrunk in the browser and stored in Firestore, so there is a per-item limit.
 const MAX_IMAGES = 4;
 const MAX_IMAGE_BYTES = 15 * 1024 * 1024; // size of the original file before compression
-const PHOTO_MAX_SIDE = 1400;
-const PHOTO_MAX_CHARS = 330_000; // ~240 KB per photo; each photo is its own Firestore document (max 1 MiB)
-const COVER_MAX_SIDE = 800;
-const COVER_MAX_CHARS = 140_000; // the cover sits on the item document, which is loaded for every list
+const PHOTO_MAX_SIDE = 2000;
+const PHOTO_MAX_CHARS = 700_000; // ~520 KB per photo; each photo is its own Firestore document (max 1 MiB)
+const COVER_MAX_SIDE = 1000;
+const COVER_MAX_CHARS = 240_000; // the cover sits on the item document, which is loaded for every list
+
+type PieceForm = { name: string; length: string; fabric: string; colour: string };
+
+const MAX_PIECES = 8;
+
+const piecesFor = (category: string): PieceForm[] =>
+  getDefaultPieces(category).map((p) => ({ name: p.name, length: p.length, fabric: "", colour: "" }));
 
 type Form = {
   name: string;
@@ -29,9 +35,17 @@ type Form = {
   fabric: string;
   colour: string;
   description: string;
+  /** "auto" follows the category; "none" hides the stitching line. */
+  stitching: "auto" | "Stitched" | "Unstitched" | "none";
+  /** Ticked preset sizes. */
+  sizes: string[];
+  /** Extra sizes, comma separated (e.g. "Free size, 3XL"). */
+  otherSizes: string;
+  pieces: PieceForm[];
+  note: string;
 };
 
-const emptyForm: Form = { name: "", category: exploreTabs[0], price: "", discountedPrice: "", fabric: "", colour: "", description: "" };
+const emptyForm: Form = { name: "", category: exploreTabs[0], price: "", discountedPrice: "", fabric: "", colour: "", description: "", stitching: "auto", sizes: [], otherSizes: "", pieces: piecesFor(exploreTabs[0]), note: DEFAULT_NOTE };
 
 function validate(f: Form, files: File[]): string | null {
   if (!f.name.trim()) return "Enter the item name.";
@@ -42,56 +56,23 @@ function validate(f: Form, files: File[]): string | null {
     if (!Number.isFinite(d) || d <= 0) return "Enter a valid discounted price, or leave it empty.";
     if (d >= price) return "The discounted price must be lower than the price.";
   }
-  if (!f.fabric.trim()) return "Enter the fabric.";
-  if (!f.colour.trim()) return "Enter the colour.";
-  if (!f.description.trim()) return "Enter a description.";
   if (files.length === 0) return "Add at least one photo.";
   return null;
 }
 
-function Notice({ children }: { children: React.ReactNode }) {
-  return <div className="mt-10 rounded-lg border border-line bg-surface p-10 text-center text-sm text-muted">{children}</div>;
-}
-
 export default function AdminPanel() {
-  const { user, loading: authLoading } = useAuth();
-  const { isAdmin, loading, errorCode } = useIsAdmin();
-
-  if (!isFirebaseConfigured) return <Notice>{NOT_CONFIGURED_MESSAGE}</Notice>;
-  if (authLoading || loading) return <div className="mt-10 h-64 animate-pulse rounded-lg bg-surface-strong" aria-busy />;
-  if (!user) {
-    return (
-      <Notice>
-        <p>Sign in with an admin account to manage items.</p>
-        <ButtonLink href="/signin" className="mt-5">Sign in</ButtonLink>
-      </Notice>
-    );
-  }
-  if (!isAdmin) {
-    const denied = errorCode === "permission-denied";
-    return (
-      <Notice>
-        <p className="font-medium text-fg">Your account does not have admin access.</p>
-        <p className="mt-3">Signed in as {user.email}</p>
-        <p className="mt-1">
-          User ID: <code className="select-all break-all rounded bg-surface-strong px-1.5 py-0.5 text-xs text-fg">{user.userId}</code>
-        </p>
-        <p className="mt-4 text-xs leading-5">
-          {denied
-            ? "Firestore refused the check (permission-denied). Deploy the latest firestore.rules, which contain the admins rule, then reload this page."
-            : errorCode
-              ? `The admin check failed (${errorCode}). Check your connection and Firebase setup.`
-              : "No document was found at admins/<User ID> in this project. The document ID must be exactly the User ID above."}
-        </p>
-      </Notice>
-    );
-  }
-
   return (
-    <div className="mt-10 grid gap-10 lg:grid-cols-[minmax(0,1fr)_420px]">
-      <AddItemForm userId={user.userId} />
-      <ManageItems />
-    </div>
+    <AdminGate>
+      {(userId) => (
+        <>
+          <p className="mt-4 text-sm text-muted">Add new items with their details and photos.</p>
+          <div className="mt-8 grid grid-cols-1 gap-10 lg:grid-cols-[minmax(0,1fr)_420px]">
+            <AddItemForm userId={userId} />
+            <ManageItems />
+          </div>
+        </>
+      )}
+    </AdminGate>
   );
 }
 
@@ -106,7 +87,22 @@ function AddItemForm({ userId }: { userId: string }) {
   const previews = useMemo(() => files.map((f) => URL.createObjectURL(f)), [files]);
   useEffect(() => () => previews.forEach(URL.revokeObjectURL), [previews]);
 
-  const set = (key: keyof Form) => (e: { target: { value: string } }) => setForm((f) => ({ ...f, [key]: e.target.value }));
+  // Until the admin edits the pieces, they follow the chosen category.
+  const [piecesEdited, setPiecesEdited] = useState(false);
+
+  const set = (key: Exclude<keyof Form, "pieces" | "sizes">) => (e: { target: { value: string } }) => setForm((f) => ({ ...f, [key]: e.target.value }));
+
+  const setCategory = (e: { target: { value: string } }) => {
+    const category = e.target.value;
+    setForm((f) => ({ ...f, category, pieces: piecesEdited ? f.pieces : piecesFor(category) }));
+  };
+
+  const editPieces = (update: (pieces: PieceForm[]) => PieceForm[]) => {
+    setPiecesEdited(true);
+    setForm((f) => ({ ...f, pieces: update(f.pieces) }));
+  };
+  const setPiece = (i: number, key: keyof PieceForm) => (e: { target: { value: string } }) =>
+    editPieces((ps) => ps.map((p, j) => (j === i ? { ...p, [key]: e.target.value } : p)));
 
   function addFiles(list: FileList | null) {
     if (!list) return;
@@ -139,6 +135,9 @@ function AddItemForm({ userId }: { userId: string }) {
       const cover = await compressImage(files[0], COVER_MAX_SIDE, COVER_MAX_CHARS);
 
       setProgress("Saving…");
+      const sizes = [...form.sizes, ...form.otherSizes.split(",").map((x) => x.trim())]
+        .filter((x, i, all) => x && all.indexOf(x) === i)
+        .slice(0, 12);
       const batch = writeBatch(db);
       batch.set(itemRef, {
         name: form.name.trim(),
@@ -148,6 +147,12 @@ function AddItemForm({ userId }: { userId: string }) {
         fabric: form.fabric.trim(),
         colour: form.colour.trim(),
         description: form.description.trim(),
+        ...(sizes.length ? { sizes } : {}),
+        ...(form.stitching === "auto" ? {} : { stitching: form.stitching }),
+        pieces: form.pieces
+          .map((p) => ({ name: p.name.trim(), length: p.length.trim(), fabric: p.fabric.trim(), colour: p.colour.trim() }))
+          .filter((p) => p.name || p.length || p.fabric || p.colour),
+        note: form.note.trim(),
         cover,
         photoCount: photos.length,
         createdBy: userId,
@@ -157,6 +162,7 @@ function AddItemForm({ userId }: { userId: string }) {
       await batch.commit();
       setSuccess(`"${form.name.trim()}" was added.`);
       setForm(emptyForm);
+      setPiecesEdited(false);
       setFiles([]);
     } catch (err) {
       const code = (err as { code?: string }).code ?? "";
@@ -179,19 +185,19 @@ function AddItemForm({ userId }: { userId: string }) {
     <form onSubmit={onSubmit} noValidate className="rounded-lg border border-line bg-surface p-6">
       <h2 className="text-lg font-semibold">Add a new item</h2>
 
-      <div className="mt-4 grid gap-x-6 sm:grid-cols-2">
+      <div className="mt-4 grid grid-cols-1 gap-x-6 sm:grid-cols-2">
         <TextField label="Item name" value={form.name} onChange={set("name")} className="sm:col-span-2" maxLength={80} />
-        <SelectField label="Category" value={form.category} onChange={set("category")} className="mb-5">
+        <SelectField label="Category" value={form.category} onChange={setCategory} className="mb-5">
           {exploreTabs.map((t) => <option key={t} value={t} className="bg-base">{t}</option>)}
         </SelectField>
         <div />
         <TextField label="Price (Rs.)" type="number" min="0" inputMode="decimal" value={form.price} onChange={set("price")} />
         <TextField label="Discounted price (optional)" type="number" min="0" inputMode="decimal" value={form.discountedPrice} onChange={set("discountedPrice")} />
-        <TextField label="Fabric" value={form.fabric} onChange={set("fabric")} maxLength={40} />
-        <TextField label="Colour" value={form.colour} onChange={set("colour")} maxLength={40} />
+        <TextField label="Fabric (optional)" value={form.fabric} onChange={set("fabric")} maxLength={40} />
+        <TextField label="Colour (optional)" value={form.colour} onChange={set("colour")} maxLength={40} />
       </div>
 
-      <label htmlFor="admin-description" className="mt-1 block text-xs text-muted">Description</label>
+      <label htmlFor="admin-description" className="mt-1 block text-xs text-muted">Description (optional)</label>
       <textarea
         id="admin-description"
         value={form.description}
@@ -200,6 +206,76 @@ function AddItemForm({ userId }: { userId: string }) {
         maxLength={600}
         className="mt-1 w-full rounded-md border border-line bg-transparent p-3 text-sm text-fg outline-none focus:border-primary"
       />
+
+      <div className="mt-6">
+        <span className="block text-xs text-muted">Sizes customers can choose (optional; leave empty if the item has no sizes)</span>
+        <div className="mt-2 flex flex-wrap gap-2">
+          {SIZE_PRESETS.map((s) => {
+            const on = form.sizes.includes(s);
+            return (
+              <button
+                key={s}
+                type="button"
+                aria-pressed={on}
+                onClick={() => setForm((f) => ({ ...f, sizes: on ? f.sizes.filter((x) => x !== s) : [...f.sizes, s] }))}
+                className={`min-w-11 rounded-md border px-3 py-1.5 text-sm transition-colors ${on ? "border-primary bg-primary text-primary-fg" : "border-line text-fg hover:border-primary"}`}
+              >{s}</button>
+            );
+          })}
+        </div>
+        <TextField label="Other sizes, comma separated (e.g. Free size, 3XL)" value={form.otherSizes} onChange={set("otherSizes")} maxLength={80} className="mt-2" />
+      </div>
+
+      <fieldset className="mt-6 rounded-md border border-line p-4">
+        <legend className="px-1 text-xs text-muted">Item details shown on the item page (all optional)</legend>
+
+        <SelectField label="Stitching" value={form.stitching} onChange={set("stitching")} className="mb-4">
+          <option value="auto" className="bg-base">Automatic (by category)</option>
+          <option value="Unstitched" className="bg-base">Unstitched</option>
+          <option value="Stitched" className="bg-base">Stitched</option>
+          <option value="none" className="bg-base">Don&apos;t show</option>
+        </SelectField>
+
+        <div className="flex items-center justify-between">
+          <span className="text-xs text-muted">Pieces ({form.pieces.length}/{MAX_PIECES}). Empty fields are not shown.</span>
+          <button
+            type="button"
+            onClick={() => editPieces((ps) => ps.map((p) => ({ ...p, fabric: p.fabric || form.fabric.trim(), colour: p.colour || form.colour.trim() })))}
+            className="text-xs text-accent hover:underline"
+          >Fill fabric &amp; colour from above</button>
+        </div>
+
+        <ul className="mt-3 space-y-4">
+          {form.pieces.map((p, i) => (
+            <li key={i} className="rounded-md bg-surface-strong/40 p-3">
+              <div className="grid grid-cols-1 gap-x-4 sm:grid-cols-2">
+                <TextField label="Piece (e.g. Shirt)" value={p.name} onChange={setPiece(i, "name")} maxLength={30} />
+                <TextField label="Length (e.g. 3m)" value={p.length} onChange={setPiece(i, "length")} maxLength={20} />
+                <TextField label="Fabric" value={p.fabric} onChange={setPiece(i, "fabric")} maxLength={40} />
+                <TextField label="Colour" value={p.colour} onChange={setPiece(i, "colour")} maxLength={40} />
+              </div>
+              <button type="button" onClick={() => editPieces((ps) => ps.filter((_, j) => j !== i))} className="text-xs text-muted hover:text-danger">Remove piece</button>
+            </li>
+          ))}
+        </ul>
+        {form.pieces.length < MAX_PIECES && (
+          <button
+            type="button"
+            onClick={() => editPieces((ps) => [...ps, { name: "", length: "", fabric: "", colour: "" }])}
+            className="mt-3 rounded-md bg-surface-strong px-3 py-1.5 text-xs font-medium hover:bg-primary-soft"
+          >+ Add piece</button>
+        )}
+
+        <label htmlFor="admin-note" className="mt-5 block text-xs text-muted">Note under the details (leave empty to hide)</label>
+        <textarea
+          id="admin-note"
+          value={form.note}
+          onChange={set("note")}
+          rows={2}
+          maxLength={200}
+          className="mt-1 w-full rounded-md border border-line bg-transparent p-3 text-sm text-fg outline-none focus:border-primary"
+        />
+      </fieldset>
 
       <div className="mt-6">
         <div className="flex items-center justify-between">

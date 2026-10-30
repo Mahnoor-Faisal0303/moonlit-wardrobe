@@ -24,6 +24,7 @@ export default function UserMenu() {
       {open && (
         <div className="absolute right-0 top-9 w-52 rounded-md border border-line bg-base p-3 shadow-card">
           <p className="truncate text-[11px] text-muted">{user.email}</p>
+          <Link href="/orders" onClick={() => setOpen(false)} className="mt-3 block w-full rounded-md bg-surface-strong py-1.5 text-center text-xs hover:bg-primary-soft">My orders</Link>
           {isAdmin && (
             <Link href="/admin" onClick={() => setOpen(false)} className="mt-3 block w-full rounded-md bg-primary-soft py-1.5 text-center text-xs text-accent hover:bg-primary hover:text-primary-fg">Admin panel</Link>
           )}

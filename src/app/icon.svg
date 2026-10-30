@@ -1,0 +1,45 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1000 1000" role="img" aria-labelledby="title desc">
+  <title id="title">ML Wardrobe</title>
+  <desc id="desc">ML Wardrobe logo with a lime crescent, fine black circular arc, and purple serif lettering.</desc>
+  <defs>
+    <linearGradient id="purple" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#9638e8"/>
+      <stop offset="1" stop-color="#7d2ed0"/>
+    </linearGradient>
+    <linearGradient id="lime" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#dce56c"/>
+      <stop offset="1" stop-color="#cbd94f"/>
+    </linearGradient>
+  </defs>
+
+  <!-- Open circular crescent -->
+  <path d="M 458,45
+           C 220,92 55,302 55,520
+           C 55,755 245,940 485,940
+           C 590,940 684,902 760,844
+           C 676,878 594,895 510,895
+           C 294,895 125,729 125,520
+           C 125,318 267,126 458,45 Z"
+        fill="url(#lime)"/>
+  <!-- Fine outer arc -->
+  <path d="M 468,48
+           C 720,35 936,238 944,493
+           C 951,697 830,865 667,925"
+        fill="none" stroke="#202024" stroke-width="5.5" stroke-linecap="round"/>
+
+  <!-- Main initials -->
+  <text x="535" y="535" text-anchor="middle"
+        font-family="Bodoni 72, Didot, 'Times New Roman', serif"
+        font-size="330" font-weight="400" letter-spacing="-18"
+        fill="url(#purple)">ML</text>
+
+  <!-- Wardrobe wordmark and side rules -->
+  <g fill="url(#purple)">
+    <rect x="185" y="620" width="115" height="6"/>
+    <rect x="700" y="620" width="115" height="6"/>
+    <text x="500" y="655" text-anchor="middle"
+          font-family="Bodoni 72, Didot, 'Times New Roman', serif"
+          font-size="82" letter-spacing="2">WARDROBE</text>
+  </g>
+</svg>

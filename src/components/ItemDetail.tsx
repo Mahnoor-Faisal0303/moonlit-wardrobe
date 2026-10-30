@@ -7,12 +7,12 @@ import { getDiscountPercent, getItemDetails, PLACEHOLDER_IMAGE } from "@/data/co
 import { getDb, isFirebaseConfigured } from "@/lib/firebase";
 import AddToBagButton from "./AddToBagButton";
 import { useItems } from "./ItemsProvider";
-import ItemTabs from "./ItemTabs";
+import ItemDetails from "./ItemDetails";
 import { ButtonLink } from "./ui";
 
 export function ItemSkeleton() {
   return (
-    <div className="mt-8 grid animate-pulse gap-8 lg:grid-cols-[1fr_380px]" aria-busy>
+    <div className="mt-8 grid animate-pulse grid-cols-1 gap-8 lg:grid-cols-[minmax(0,1fr)_380px]" aria-busy>
       <div className="grid grid-cols-2 gap-1">
         {[0, 1, 2, 3].map((i) => <div key={i} className="aspect-[3/4] bg-surface-strong" />)}
       </div>
@@ -67,11 +67,10 @@ export default function ItemDetail({ id }: { id: string }) {
   }
 
   const discountPercent = getDiscountPercent(card.price, card.discountedPrice);
-  const { pieces } = getItemDetails(card);
+  const details = getItemDetails(card);
   const sku = card.custom
     ? `MW-${card.id.slice(0, 6).toUpperCase()}`
     : `MW${card.category.replace(/\s/g, "").toUpperCase()}${String(Number(card.id) + 1).padStart(3, "0")}`;
-  const label = `Unstitched ${pieces.length}-Piece`;
 
   const sources = gallery?.id === id ? gallery.urls : card.images;
   const photos = sources.length
@@ -79,7 +78,7 @@ export default function ItemDetail({ id }: { id: string }) {
     : SAMPLE_CROPS.map((fit) => ({ src: PLACEHOLDER_IMAGE, fit }));
 
   return (
-    <div className="mt-8 grid gap-8 lg:grid-cols-[1fr_380px]">
+    <div className="mt-8 grid grid-cols-1 gap-8 lg:grid-cols-[minmax(0,1fr)_380px]">
       <div className={`grid gap-1 ${photos.length === 1 ? "grid-cols-1" : "grid-cols-2"}`}>
         {photos.map((p, i) => (
           <div key={i} className="relative aspect-[3/4] overflow-hidden bg-surface-strong">
@@ -100,9 +99,9 @@ export default function ItemDetail({ id }: { id: string }) {
         </div>
         <p className="mt-3 text-[11px] text-muted">SKU: {sku}</p>
 
-        <AddToBagButton id={card.id} />
+        <AddToBagButton key={card.id} id={card.id} sizes={card.sizes} />
 
-        <ItemTabs pieces={pieces} description={card.description} label={label} />
+        <ItemDetails {...details} />
       </div>
     </div>
   );

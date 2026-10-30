@@ -19,10 +19,10 @@ import { Button } from "./ui";
 
 const months = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
 
-type Field = "email" | "firstName" | "lastName" | "password" | "confirm" | "dob" | "terms";
+type Field = "email" | "firstName" | "lastName" | "password" | "confirm" | "dob";
 type Errors = Partial<Record<Field, string>>;
 // The input to focus for each field when it has an error.
-const focusTarget: Record<Field, string> = { email: "email", firstName: "firstName", lastName: "lastName", password: "password", confirm: "confirm", dob: "month", terms: "terms" };
+const focusTarget: Record<Field, string> = { email: "email", firstName: "firstName", lastName: "lastName", password: "password", confirm: "confirm", dob: "month" };
 
 const daysIn = (month: number, year: number) => (month ? new Date(year || 2000, month, 0).getDate() : 31);
 
@@ -36,7 +36,6 @@ export default function SignUpForm() {
   const [errors, setErrors] = useState<Errors>({});
   const [password, setPassword] = useState("");
   const [confirm, setConfirm] = useState("");
-  const [terms, setTerms] = useState(false);
   const [dob, setDob] = useState({ month: "", day: "", year: "" });
   const [years, setYears] = useState<number[]>([]);
 
@@ -92,7 +91,6 @@ export default function SignUpForm() {
     if (!confirm) found.confirm = "Please confirm your password.";
     else if (confirm !== password) found.confirm = "Passwords do not match.";
     if ("error" in birthdate) found.dob = dob.month && dob.day && dob.year ? birthdate.error : "Please select your date of birth.";
-    if (!terms) found.terms = "You must accept the Terms and Privacy Policy to continue.";
     if (Object.keys(found).length) return fail(found);
 
     submitting.current = true;
@@ -108,7 +106,6 @@ export default function SignUpForm() {
         firstName,
         lastName,
         birthdate: "value" in birthdate ? birthdate.value : "",
-        termsAcceptedAt: serverTimestamp(),
         createdAt: serverTimestamp(),
       }).catch((err) => console.warn("Could not save profile to Firestore:", err));
       router.replace("/verify-email");
@@ -134,7 +131,7 @@ export default function SignUpForm() {
 
       <div className="mt-6">
         <TextField name="email" type="email" label="Email Address" autoComplete="email" error={errors.email} onChange={() => clear("email")} />
-        <div className="grid gap-x-8 sm:grid-cols-2">
+        <div className="grid grid-cols-1 gap-x-8 sm:grid-cols-2">
           <TextField name="firstName" label="First Name" autoComplete="given-name" maxLength={50} error={errors.firstName} onChange={() => clear("firstName")} />
           <TextField name="lastName" label="Last Name" autoComplete="family-name" maxLength={50} error={errors.lastName} onChange={() => clear("lastName")} />
         </div>
@@ -177,24 +174,6 @@ export default function SignUpForm() {
           </div>
           <p role={errors.dob ? "alert" : undefined} className="min-h-5 pt-1 text-xs text-danger">{errors.dob}</p>
         </fieldset>
-
-        <div className="mt-2">
-          <label className="flex min-h-11 cursor-pointer items-start gap-3 text-sm text-muted">
-            <input
-              name="terms"
-              type="checkbox"
-              checked={terms}
-              aria-invalid={!!errors.terms}
-              onChange={(e) => { setTerms(e.target.checked); clear("terms"); }}
-              className="mt-0.5 h-5 w-5 shrink-0 accent-primary"
-            />
-            <span>
-              I agree to the <Link href="/terms" target="_blank" className="text-accent hover:underline">Terms of Service</Link> and{" "}
-              <Link href="/privacy" target="_blank" className="text-accent hover:underline">Privacy Policy</Link>.
-            </span>
-          </label>
-          <p role={errors.terms ? "alert" : undefined} className="min-h-5 pt-1 text-xs text-danger">{errors.terms}</p>
-        </div>
       </div>
 
       <FormError message={formError} />
@@ -203,14 +182,7 @@ export default function SignUpForm() {
       </Button>
 
       <p className="my-8 text-center text-sm">Or</p>
-      <SocialButtons
-        onError={setFormError}
-        beforeStart={() => {
-          if (terms) return true;
-          fail({ terms: "You must accept the Terms and Privacy Policy to continue." });
-          return false;
-        }}
-      />
+      <SocialButtons onError={setFormError} />
     </AuthCard>
   );
 }

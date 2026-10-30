@@ -1,5 +1,6 @@
 "use client";
 
+import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
@@ -18,7 +19,10 @@ export default function Navbar() {
   return (
     <header className="sticky top-0 z-50 border-b border-line bg-nav backdrop-blur-md">
       <div className="container-x flex h-14 items-center gap-6">
-        <Link href="/" className="text-lg font-bold text-primary">Moonlit Wardrobe</Link>
+        <Link href="/" aria-label="Moonlit Wardrobe, home" className="flex shrink-0 items-center gap-2 text-lg font-bold text-primary">
+          <Image src="/ml_wardrobe_logo.svg" alt="" width={36} height={36} priority className="h-9 w-9" />
+          <span className="hidden min-[420px]:inline">Moonlit Wardrobe</span>
+        </Link>
         <form
           role="search"
           onSubmit={(e) => {

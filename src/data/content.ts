@@ -6,8 +6,6 @@ export const navLinks = [
 ];
 export const moreLinks = [
   { label: "FAQ", href: "/#faq" },
-  { label: "Terms", href: "/terms" },
-  { label: "Privacy", href: "/privacy" },
 ];
 
 export const features = [
@@ -19,9 +17,9 @@ export const features = [
 export const faqs = [
   { q: "How long does delivery take?", a: "Orders are delivered within 3–5 working days anywhere in the country." },
   { q: "Can I return or exchange an item?", a: "Yes. Unworn items with tags can be returned or exchanged within 7 days of delivery." },
-  { q: "Are the suits stitched?", a: "Our 1PC, 2PC and 3PC collections are unstitched. Casual, Semi Formal and Formal pieces list their details on the item page." },
+  { q: "Are the suits stitched?", a: "Every item page states whether it is stitched or unstitched in its details." },
   { q: "Will the colour match the photos?", a: "We try to be accurate, but actual colour may vary slightly from the image because of screen settings." },
-  { q: "Which payment methods do you accept?", a: "Cash on delivery and online card payments are supported." },
+  { q: "Which payment methods do you accept?", a: "Cash on delivery and online payments are supported." },
   { q: "How should I care for my outfit?", a: "Dry clean embellished and formal pieces. Lawn and cotton can be gently hand washed in cold water." },
 ];
 
@@ -34,8 +32,6 @@ export const footerCols = [
   ] },
   { title: "Help", links: [
     { label: "FAQ", href: "/#faq" },
-    { label: "Terms & Conditions", href: "/terms" },
-    { label: "Privacy Policy", href: "/privacy" },
     { label: "Your Bag", href: "/bag" },
   ] },
 ];
@@ -118,6 +114,9 @@ const itemSpecs: { fabric: string; colour: string }[] = [
   { fabric: "Tissue", colour: "Champagne" },
 ];
 
+export type ItemPiece = { name: string; length?: string; fabric?: string; colour?: string };
+export type Stitching = "Stitched" | "Unstitched";
+
 const piecesByCategory: Record<string, { name: string; length: string }[]> = {
   "1PC": [{ name: "Shirt", length: "3m" }],
   "2PC": [{ name: "Shirt", length: "3m" }, { name: "Trouser", length: "2.5m" }],
@@ -128,6 +127,11 @@ const defaultPieces = [
   { name: "Trouser", length: "2.5m" },
 ];
 
+export const getDefaultPieces = (category: string) => piecesByCategory[category] ?? defaultPieces;
+
+export const SIZE_PRESETS = ["XS", "S", "M", "L", "XL", "XXL"];
+
+export const DEFAULT_NOTE = "Note: actual product colour may vary slightly from the image.";
 
 export type Item = {
   id: string;
@@ -138,6 +142,14 @@ export type Item = {
   description: string;
   fabric: string;
   colour: string;
+  /** Set by the admin; when missing the stitching follows the category. */
+  stitching?: Stitching | "none";
+  /** Sizes the customer can choose from; none means the item has no size choice. */
+  sizes?: string[];
+  /** Set by the admin; when missing the pieces follow the category. */
+  pieces?: ItemPiece[];
+  /** Footnote under the details; an empty string hides it, and when missing DEFAULT_NOTE is shown. */
+  note?: string;
   /** Photo URLs or data URLs. Built-in items use the illustrations in public/items; admin-added items carry just their cover here. */
   images: string[];
   /** True for items an admin added through the admin panel. */
@@ -148,6 +160,8 @@ export const PLACEHOLDER_IMAGE = "/items/suit.png";
 
 export const formatPrice = (n: number) => n.toLocaleString("en-US");
 
+export const formatRs = (n: number) => `Rs. ${formatPrice(n)}`;
+
 export const staticItems: Item[] = rawItems.map((c, i) => ({
   id: String(i),
   ...c,
@@ -155,15 +169,29 @@ export const staticItems: Item[] = rawItems.map((c, i) => ({
   images: [`/items/${i}-1.svg`, `/items/${i}-2.svg`],
 }));
 
-export function getItemDetails(item: Pick<Item, "category" | "fabric" | "colour">) {
+const unstitchedCategories = ["1PC", "2PC", "3PC"];
+
+/** The 1PC, 2PC and 3PC collections are unstitched; Casual, Semi Formal and Formal pieces are stitched. */
+export const getStitchLabel = (category: string) => (unstitchedCategories.includes(category) ? "Unstitched" : "Stitched");
+
+/** Everything the item page shows under DETAILS. Every part is optional and is left out when empty. */
+export function getItemDetails(item: Pick<Item, "category" | "fabric" | "colour" | "stitching" | "pieces" | "note">) {
   const { fabric, colour, category } = item;
-  const pieces = (piecesByCategory[category] ?? defaultPieces).map((p) => ({
-    title: p.name,
-    line: `${fabric} ${p.name} ${p.length}`,
-    fabric,
-    colour,
-  }));
-  return { fabric, colour, pieces };
+  const pieces = (item.pieces ??
+    getDefaultPieces(category).map((p) => ({ ...p, fabric, colour }))
+  ).map((p) => {
+    const words = [p.fabric, p.name, p.length].filter(Boolean);
+    return {
+      title: p.name,
+      // "Khaddar Shirt 3m"; skipped when it would only repeat the piece name.
+      line: words.length > 1 ? words.join(" ") : "",
+      fabric: p.fabric ?? "",
+      colour: p.colour ?? "",
+    };
+  });
+  const stitching = item.stitching === "none" ? "" : (item.stitching ?? getStitchLabel(category));
+  const label = [stitching, pieces.length ? `${pieces.length}-Piece` : ""].filter(Boolean).join(" ");
+  return { label, pieces, note: item.note ?? DEFAULT_NOTE };
 }
 
 export const socials = ["youtube", "discord", "instagram"] as const;

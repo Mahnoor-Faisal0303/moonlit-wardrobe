@@ -2,7 +2,7 @@
 
 import { collection, onSnapshot, orderBy, query, type DocumentData } from "firebase/firestore";
 import { createContext, useContext, useEffect, useMemo, useState, type ReactNode } from "react";
-import { formatPrice, staticItems, type Item } from "@/data/content";
+import { formatPrice, staticItems, type Item, type ItemPiece } from "@/data/content";
 import { getDb, isFirebaseConfigured } from "@/lib/firebase";
 
 type ItemsState = {
@@ -20,6 +20,13 @@ export function useItems() {
   return ctx;
 }
 
+const str = (v: unknown) => (typeof v === "string" ? v : undefined);
+
+const piecesFromDoc = (v: unknown): ItemPiece[] | undefined =>
+  Array.isArray(v)
+    ? v.map((p) => ({ name: str(p?.name) ?? "", length: str(p?.length), fabric: str(p?.fabric), colour: str(p?.colour) }))
+    : undefined;
+
 const fromDoc = (id: string, d: DocumentData): Item => ({
   id,
   name: d.name,
@@ -29,6 +36,10 @@ const fromDoc = (id: string, d: DocumentData): Item => ({
   description: d.description ?? "",
   fabric: d.fabric ?? "",
   colour: d.colour ?? "",
+  stitching: d.stitching === "Stitched" || d.stitching === "Unstitched" || d.stitching === "none" ? d.stitching : undefined,
+  sizes: Array.isArray(d.sizes) ? d.sizes.filter((x: unknown): x is string => typeof x === "string" && x !== "") : undefined,
+  pieces: piecesFromDoc(d.pieces),
+  note: str(d.note),
   // Only the small cover is on the item document; the full gallery is loaded on the item page.
   images: typeof d.cover === "string" ? [d.cover] : [],
   custom: true,

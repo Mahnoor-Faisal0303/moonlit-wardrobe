@@ -10,8 +10,6 @@ export default function AdminPage() {
     <>
       <Navbar />
       <main className="container-x pt-24 pb-20">
-        <h1 className="text-3xl font-bold md:text-4xl">Admin</h1>
-        <p className="mt-2 text-sm text-muted">Add new items with their details and photos.</p>
         <AdminPanel />
       </main>
       <Footer />
