@@ -138,7 +138,7 @@ export type Item = {
   description: string;
   fabric: string;
   colour: string;
-  /** Photo URLs. The built-in sample items use the illustrations in public/items. */
+  /** Photo URLs or data URLs. Built-in items use the illustrations in public/items; admin-added items carry just their cover here. */
   images: string[];
   /** True for items an admin added through the admin panel. */
   custom?: boolean;

@@ -1,20 +1,25 @@
 "use client";
 
-import { collection, deleteDoc, doc, serverTimestamp, setDoc } from "firebase/firestore";
-import { deleteObject, getDownloadURL, ref, uploadBytes } from "firebase/storage";
+import { collection, doc, getDocs, serverTimestamp, writeBatch } from "firebase/firestore";
 import Image from "next/image";
 import Link from "next/link";
 import { useEffect, useMemo, useState, type FormEvent } from "react";
 import { exploreTabs, type Item } from "@/data/content";
-import { getDb, getFirebaseStorage, isFirebaseConfigured, NOT_CONFIGURED_MESSAGE } from "@/lib/firebase";
+import { getDb, isFirebaseConfigured, NOT_CONFIGURED_MESSAGE } from "@/lib/firebase";
+import { compressImage } from "@/lib/image-compress";
 import { useAuth } from "./AuthProvider";
 import { SelectField, TextField } from "./fields";
 import { useItems } from "./ItemsProvider";
 import { Button, ButtonLink } from "./ui";
 import { useIsAdmin } from "./useIsAdmin";
 
-const MAX_IMAGES = 6;
-const MAX_IMAGE_BYTES = 5 * 1024 * 1024;
+// Photos are shrunk in the browser and stored in Firestore, so there is a per-item limit.
+const MAX_IMAGES = 4;
+const MAX_IMAGE_BYTES = 15 * 1024 * 1024; // size of the original file before compression
+const PHOTO_MAX_SIDE = 1400;
+const PHOTO_MAX_CHARS = 330_000; // ~240 KB per photo; each photo is its own Firestore document (max 1 MiB)
+const COVER_MAX_SIDE = 800;
+const COVER_MAX_CHARS = 140_000; // the cover sits on the item document, which is loaded for every list
 
 type Form = {
   name: string;
@@ -96,6 +101,7 @@ function AddItemForm({ userId }: { userId: string }) {
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
+  const [progress, setProgress] = useState<string | null>(null);
 
   const previews = useMemo(() => files.map((f) => URL.createObjectURL(f)), [files]);
   useEffect(() => () => previews.forEach(URL.revokeObjectURL), [previews]);
@@ -106,7 +112,7 @@ function AddItemForm({ userId }: { userId: string }) {
     if (!list) return;
     const picked = Array.from(list);
     const bad = picked.find((f) => !f.type.startsWith("image/") || f.size > MAX_IMAGE_BYTES);
-    if (bad) return setError(`"${bad.name}" must be an image under 5 MB.`);
+    if (bad) return setError(`"${bad.name}" must be an image under 15 MB.`);
     if (files.length + picked.length > MAX_IMAGES) return setError(`You can add up to ${MAX_IMAGES} photos.`);
     setError(null);
     setFiles((prev) => [...prev, ...picked]);
@@ -121,17 +127,20 @@ function AddItemForm({ userId }: { userId: string }) {
     setError(null);
     setSaving(true);
     try {
-      const itemRef = doc(collection(getDb(), "items"));
-      const storage = getFirebaseStorage();
-      const images = await Promise.all(
-        files.map(async (file, i) => {
-          const ext = file.name.split(".").pop()?.toLowerCase().replace(/[^a-z0-9]/g, "") || "jpg";
-          const fileRef = ref(storage, `items/${itemRef.id}/${i}-${Date.now()}.${ext}`);
-          await uploadBytes(fileRef, file, { contentType: file.type });
-          return getDownloadURL(fileRef);
-        }),
-      );
-      await setDoc(itemRef, {
+      const db = getDb();
+      const itemRef = doc(collection(db, "items"));
+
+      // Shrink every photo so it fits in a Firestore document, plus a small cover for the item lists.
+      const photos: string[] = [];
+      for (let i = 0; i < files.length; i++) {
+        setProgress(`Processing photo ${i + 1} of ${files.length}…`);
+        photos.push(await compressImage(files[i], PHOTO_MAX_SIDE, PHOTO_MAX_CHARS));
+      }
+      const cover = await compressImage(files[0], COVER_MAX_SIDE, COVER_MAX_CHARS);
+
+      setProgress("Saving…");
+      const batch = writeBatch(db);
+      batch.set(itemRef, {
         name: form.name.trim(),
         category: form.category,
         price: Number(form.price),
@@ -139,22 +148,30 @@ function AddItemForm({ userId }: { userId: string }) {
         fabric: form.fabric.trim(),
         colour: form.colour.trim(),
         description: form.description.trim(),
-        images,
+        cover,
+        photoCount: photos.length,
         createdBy: userId,
         createdAt: serverTimestamp(),
       });
+      photos.forEach((data, index) => batch.set(doc(itemRef, "photos", String(index)), { index, data }));
+      await batch.commit();
       setSuccess(`"${form.name.trim()}" was added.`);
       setForm(emptyForm);
       setFiles([]);
     } catch (err) {
       const code = (err as { code?: string }).code ?? "";
       setError(
-        code.includes("unauthorized") || code.includes("permission")
-          ? "Permission denied. Check that the Firestore and Storage rules are deployed and your account is listed as an admin."
-          : "Could not save the item. Check your connection and try again.",
+        code.includes("permission")
+          ? "Permission denied. Publish the latest firestore.rules and make sure your account is listed in admins."
+          : code
+            ? `Could not save the item (${code}). Check your connection and try again.`
+            : err instanceof Error
+              ? err.message
+              : "Could not save the item. Try again.",
       );
     } finally {
       setSaving(false);
+      setProgress(null);
     }
   }
 
@@ -214,7 +231,7 @@ function AddItemForm({ userId }: { userId: string }) {
       <p role="alert" className="mt-4 min-h-5 text-xs text-danger">{error}</p>
       <p role="status" className="min-h-5 text-xs text-accent">{success}</p>
 
-      <Button type="submit" loading={saving} className="mt-2 w-full !py-3">{saving ? "Uploading…" : "Add item"}</Button>
+      <Button type="submit" loading={saving} className="mt-2 w-full !py-3">{saving ? (progress ?? "Saving…") : "Add item"}</Button>
     </form>
   );
 }
@@ -230,9 +247,12 @@ function ManageItems() {
     setBusyId(item.id);
     setError(null);
     try {
-      await deleteDoc(doc(getDb(), "items", item.id));
-      // Photos are cleaned up best-effort; a leftover file is harmless.
-      await Promise.allSettled(item.images.map((url) => deleteObject(ref(getFirebaseStorage(), url))));
+      const db = getDb();
+      const batch = writeBatch(db);
+      const photos = await getDocs(collection(db, "items", item.id, "photos"));
+      photos.forEach((p) => batch.delete(p.ref));
+      batch.delete(doc(db, "items", item.id));
+      await batch.commit();
     } catch {
       setError("Could not delete the item. Try again.");
     } finally {

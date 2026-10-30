@@ -29,7 +29,8 @@ const fromDoc = (id: string, d: DocumentData): Item => ({
   description: d.description ?? "",
   fabric: d.fabric ?? "",
   colour: d.colour ?? "",
-  images: Array.isArray(d.images) ? d.images : [],
+  // Only the small cover is on the item document; the full gallery is loaded on the item page.
+  images: typeof d.cover === "string" ? [d.cover] : [],
   custom: true,
 });
 

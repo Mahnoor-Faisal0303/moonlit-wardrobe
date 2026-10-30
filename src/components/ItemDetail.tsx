@@ -1,7 +1,10 @@
 "use client";
 
+import { collection, getDocs, orderBy, query } from "firebase/firestore";
 import Image from "next/image";
+import { useEffect, useState } from "react";
 import { getDiscountPercent, getItemDetails, PLACEHOLDER_IMAGE } from "@/data/content";
+import { getDb, isFirebaseConfigured } from "@/lib/firebase";
 import AddToBagButton from "./AddToBagButton";
 import { useItems } from "./ItemsProvider";
 import ItemTabs from "./ItemTabs";
@@ -34,6 +37,23 @@ const SAMPLE_CROPS = [
 export default function ItemDetail({ id }: { id: string }) {
   const { items, loaded } = useItems();
   const card = items.find((c) => c.id === id);
+  const isCustom = !!card?.custom;
+  const [gallery, setGallery] = useState<{ id: string; urls: string[] } | null>(null);
+
+  // Admin-added items keep their full photos in a subcollection; show the cover until they arrive.
+  useEffect(() => {
+    if (!isCustom || !isFirebaseConfigured) return;
+    let cancelled = false;
+    getDocs(query(collection(getDb(), "items", id, "photos"), orderBy("index")))
+      .then((snap) => {
+        const urls = snap.docs.map((d) => d.data().data as string);
+        if (!cancelled && urls.length) setGallery({ id, urls });
+      })
+      .catch(() => {});
+    return () => {
+      cancelled = true;
+    };
+  }, [id, isCustom]);
 
   if (!card) {
     if (!loaded) return <ItemSkeleton />;
@@ -53,8 +73,9 @@ export default function ItemDetail({ id }: { id: string }) {
     : `MW${card.category.replace(/\s/g, "").toUpperCase()}${String(Number(card.id) + 1).padStart(3, "0")}`;
   const label = `Unstitched ${pieces.length}-Piece`;
 
-  const photos = card.images.length
-    ? card.images.map((src) => ({ src, fit: "object-cover object-top" }))
+  const sources = gallery?.id === id ? gallery.urls : card.images;
+  const photos = sources.length
+    ? sources.map((src) => ({ src, fit: "object-cover object-top" }))
     : SAMPLE_CROPS.map((fit) => ({ src: PLACEHOLDER_IMAGE, fit }));
 
   return (
