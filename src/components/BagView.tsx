@@ -15,7 +15,7 @@ export default function BagView() {
 
   const items = lines.flatMap((l) => {
     const card = catalog.find((c) => c.id === l.id);
-    return card ? [{ card, qty: l.qty, unit: priceToNumber(card.discountedPrice ?? card.price) }] : [];
+    return card ? [{ card, size: l.size, qty: l.qty, unit: priceToNumber(card.discountedPrice ?? card.price) }] : [];
   });
   const subtotal = items.reduce((sum, i) => sum + i.unit * i.qty, 0);
 
@@ -35,22 +35,22 @@ export default function BagView() {
   return (
     <div className="mt-10 grid gap-8 lg:grid-cols-[1fr_340px]">
       <ul className="divide-y divide-line rounded-lg border border-line bg-surface">
-        {items.map(({ card, qty, unit }) => (
-          <li key={card.id} className="flex gap-4 p-4">
+        {items.map(({ card, size, qty, unit }) => (
+          <li key={`${card.id}|${size ?? ""}`} className="flex gap-4 p-4">
             <Link href={`/explore/${card.id}`} className="relative h-28 w-20 shrink-0 overflow-hidden rounded bg-surface-strong">
               <Image src={card.images[0] ?? PLACEHOLDER_IMAGE} alt={card.name} fill sizes="80px" className="object-cover object-top" />
             </Link>
             <div className="flex flex-1 flex-col">
               <Link href={`/explore/${card.id}`} className="text-sm font-semibold uppercase tracking-wide text-fg hover:text-accent">{card.name}</Link>
-              <span className="mt-1 text-xs text-muted">{card.category}</span>
+              <span className="mt-1 text-xs text-muted">{card.category}{size && ` · Size ${size}`}</span>
               <span className="mt-2 text-sm font-medium text-accent">{formatRs(unit)}</span>
               <div className="mt-auto flex items-center gap-3 pt-3">
                 <div className="flex items-center rounded-md border border-line text-sm">
-                  <button onClick={() => setQty(card.id, qty - 1)} aria-label="Decrease quantity" className="px-3 py-1 text-muted hover:text-fg">−</button>
+                  <button onClick={() => setQty(card.id, size, qty - 1)} aria-label="Decrease quantity" className="px-3 py-1 text-muted hover:text-fg">−</button>
                   <span className="min-w-6 text-center text-fg">{qty}</span>
-                  <button onClick={() => setQty(card.id, qty + 1)} aria-label="Increase quantity" className="px-3 py-1 text-muted hover:text-fg">+</button>
+                  <button onClick={() => setQty(card.id, size, qty + 1)} aria-label="Increase quantity" className="px-3 py-1 text-muted hover:text-fg">+</button>
                 </div>
-                <button onClick={() => remove(card.id)} aria-label={`Remove ${card.name} from bag`} title="Remove" className="rounded-md p-1.5 text-muted transition-colors hover:bg-danger/15 hover:text-danger">
+                <button onClick={() => remove(card.id, size)} aria-label={`Remove ${card.name} from bag`} title="Remove" className="rounded-md p-1.5 text-muted transition-colors hover:bg-danger/15 hover:text-danger">
                   <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
                     <path d="M3 6h18M8 6V4h8v2M6 6l1 14h10l1-14M10 11v6M14 11v6" />
                   </svg>

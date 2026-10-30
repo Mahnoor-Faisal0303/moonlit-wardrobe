@@ -5,7 +5,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useState, type FormEvent } from "react";
-import { DEFAULT_NOTE, exploreTabs, getDefaultPieces, type Item } from "@/data/content";
+import { DEFAULT_NOTE, exploreTabs, getDefaultPieces, SIZE_PRESETS, type Item } from "@/data/content";
 import { getDb, isFirebaseConfigured, NOT_CONFIGURED_MESSAGE } from "@/lib/firebase";
 import { compressImage } from "@/lib/image-compress";
 import { useAuth } from "./AuthProvider";
@@ -39,11 +39,15 @@ type Form = {
   description: string;
   /** "auto" follows the category; "none" hides the stitching line. */
   stitching: "auto" | "Stitched" | "Unstitched" | "none";
+  /** Ticked preset sizes. */
+  sizes: string[];
+  /** Extra sizes, comma separated (e.g. "Free size, 3XL"). */
+  otherSizes: string;
   pieces: PieceForm[];
   note: string;
 };
 
-const emptyForm: Form = { name: "", category: exploreTabs[0], price: "", discountedPrice: "", fabric: "", colour: "", description: "", stitching: "auto", pieces: piecesFor(exploreTabs[0]), note: DEFAULT_NOTE };
+const emptyForm: Form = { name: "", category: exploreTabs[0], price: "", discountedPrice: "", fabric: "", colour: "", description: "", stitching: "auto", sizes: [], otherSizes: "", pieces: piecesFor(exploreTabs[0]), note: DEFAULT_NOTE };
 
 function validate(f: Form, files: File[]): string | null {
   if (!f.name.trim()) return "Enter the item name.";
@@ -106,7 +110,7 @@ function AddItemForm({ userId }: { userId: string }) {
   // Until the admin edits the pieces, they follow the chosen category.
   const [piecesEdited, setPiecesEdited] = useState(false);
 
-  const set = (key: Exclude<keyof Form, "pieces">) => (e: { target: { value: string } }) => setForm((f) => ({ ...f, [key]: e.target.value }));
+  const set = (key: Exclude<keyof Form, "pieces" | "sizes">) => (e: { target: { value: string } }) => setForm((f) => ({ ...f, [key]: e.target.value }));
 
   const setCategory = (e: { target: { value: string } }) => {
     const category = e.target.value;
@@ -151,6 +155,9 @@ function AddItemForm({ userId }: { userId: string }) {
       const cover = await compressImage(files[0], COVER_MAX_SIDE, COVER_MAX_CHARS);
 
       setProgress("Saving…");
+      const sizes = [...form.sizes, ...form.otherSizes.split(",").map((x) => x.trim())]
+        .filter((x, i, all) => x && all.indexOf(x) === i)
+        .slice(0, 12);
       const batch = writeBatch(db);
       batch.set(itemRef, {
         name: form.name.trim(),
@@ -160,6 +167,7 @@ function AddItemForm({ userId }: { userId: string }) {
         fabric: form.fabric.trim(),
         colour: form.colour.trim(),
         description: form.description.trim(),
+        ...(sizes.length ? { sizes } : {}),
         ...(form.stitching === "auto" ? {} : { stitching: form.stitching }),
         pieces: form.pieces
           .map((p) => ({ name: p.name.trim(), length: p.length.trim(), fabric: p.fabric.trim(), colour: p.colour.trim() }))
@@ -218,6 +226,25 @@ function AddItemForm({ userId }: { userId: string }) {
         maxLength={600}
         className="mt-1 w-full rounded-md border border-line bg-transparent p-3 text-sm text-fg outline-none focus:border-primary"
       />
+
+      <div className="mt-6">
+        <span className="block text-xs text-muted">Sizes customers can choose (optional; leave empty if the item has no sizes)</span>
+        <div className="mt-2 flex flex-wrap gap-2">
+          {SIZE_PRESETS.map((s) => {
+            const on = form.sizes.includes(s);
+            return (
+              <button
+                key={s}
+                type="button"
+                aria-pressed={on}
+                onClick={() => setForm((f) => ({ ...f, sizes: on ? f.sizes.filter((x) => x !== s) : [...f.sizes, s] }))}
+                className={`min-w-11 rounded-md border px-3 py-1.5 text-sm transition-colors ${on ? "border-primary bg-primary text-primary-fg" : "border-line text-fg hover:border-primary"}`}
+              >{s}</button>
+            );
+          })}
+        </div>
+        <TextField label="Other sizes, comma separated (e.g. Free size, 3XL)" value={form.otherSizes} onChange={set("otherSizes")} maxLength={80} className="mt-2" />
+      </div>
 
       <fieldset className="mt-6 rounded-md border border-line p-4">
         <legend className="px-1 text-xs text-muted">Item details shown on the item page (all optional)</legend>

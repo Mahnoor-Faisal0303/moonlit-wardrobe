@@ -2,14 +2,17 @@
 
 import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from "react";
 
-export type CartLine = { id: string; qty: number };
+/** A line is one item in one size; the same item in two sizes is two lines. */
+export type CartLine = { id: string; size?: string; qty: number };
+
+const isLine = (l: CartLine, id: string, size?: string) => l.id === id && l.size === size;
 
 type CartContextValue = {
   lines: CartLine[];
   count: number;
-  add: (id: string) => void;
-  setQty: (id: string, qty: number) => void;
-  remove: (id: string) => void;
+  add: (id: string, size?: string) => void;
+  setQty: (id: string, size: string | undefined, qty: number) => void;
+  remove: (id: string, size?: string) => void;
   clear: () => void;
 };
 
@@ -35,19 +38,19 @@ export function CartProvider({ children }: { children: ReactNode }) {
     } catch {}
   }, [lines, loaded]);
 
-  const add = useCallback((id: string) => {
+  const add = useCallback((id: string, size?: string) => {
     setLines((prev) =>
-      prev.some((l) => l.id === id)
-        ? prev.map((l) => (l.id === id ? { ...l, qty: l.qty + 1 } : l))
-        : [...prev, { id, qty: 1 }],
+      prev.some((l) => isLine(l, id, size))
+        ? prev.map((l) => (isLine(l, id, size) ? { ...l, qty: l.qty + 1 } : l))
+        : [...prev, { id, ...(size ? { size } : {}), qty: 1 }],
     );
   }, []);
 
-  const setQty = useCallback((id: string, qty: number) => {
-    setLines((prev) => (qty < 1 ? prev.filter((l) => l.id !== id) : prev.map((l) => (l.id === id ? { ...l, qty } : l))));
+  const setQty = useCallback((id: string, size: string | undefined, qty: number) => {
+    setLines((prev) => (qty < 1 ? prev.filter((l) => !isLine(l, id, size)) : prev.map((l) => (isLine(l, id, size) ? { ...l, qty } : l))));
   }, []);
 
-  const remove = useCallback((id: string) => setLines((prev) => prev.filter((l) => l.id !== id)), []);
+  const remove = useCallback((id: string, size?: string) => setLines((prev) => prev.filter((l) => !isLine(l, id, size))), []);
   const clear = useCallback(() => setLines([]), []);
 
   const value = useMemo(

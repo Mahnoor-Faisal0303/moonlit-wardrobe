@@ -99,7 +99,7 @@ export default function ItemDetail({ id }: { id: string }) {
         </div>
         <p className="mt-3 text-[11px] text-muted">SKU: {sku}</p>
 
-        <AddToBagButton id={card.id} />
+        <AddToBagButton key={card.id} id={card.id} sizes={card.sizes} />
 
         <ItemDetails {...details} />
       </div>

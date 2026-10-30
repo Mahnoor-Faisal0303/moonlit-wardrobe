@@ -133,6 +133,8 @@ const defaultPieces = [
 
 export const getDefaultPieces = (category: string) => piecesByCategory[category] ?? defaultPieces;
 
+export const SIZE_PRESETS = ["XS", "S", "M", "L", "XL", "XXL"];
+
 export const DEFAULT_NOTE = "Note: actual product colour may vary slightly from the image.";
 
 export type Item = {
@@ -146,6 +148,8 @@ export type Item = {
   colour: string;
   /** Set by the admin; when missing the stitching follows the category. */
   stitching?: Stitching | "none";
+  /** Sizes the customer can choose from; none means the item has no size choice. */
+  sizes?: string[];
   /** Set by the admin; when missing the pieces follow the category. */
   pieces?: ItemPiece[];
   /** Footnote under the details; an empty string hides it, and when missing DEFAULT_NOTE is shown. */

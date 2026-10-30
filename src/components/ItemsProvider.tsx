@@ -37,6 +37,7 @@ const fromDoc = (id: string, d: DocumentData): Item => ({
   fabric: d.fabric ?? "",
   colour: d.colour ?? "",
   stitching: d.stitching === "Stitched" || d.stitching === "Unstitched" || d.stitching === "none" ? d.stitching : undefined,
+  sizes: Array.isArray(d.sizes) ? d.sizes.filter((x: unknown): x is string => typeof x === "string" && x !== "") : undefined,
   pieces: piecesFromDoc(d.pieces),
   note: str(d.note),
   // Only the small cover is on the item document; the full gallery is loaded on the item page.
