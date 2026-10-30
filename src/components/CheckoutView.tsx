@@ -127,11 +127,11 @@ export default function CheckoutView() {
     );
   }
   return (
-    <form onSubmit={onSubmit} noValidate className="mt-10 grid gap-8 lg:grid-cols-[1fr_380px]">
+    <form onSubmit={onSubmit} noValidate className="mt-10 grid grid-cols-1 gap-8 lg:grid-cols-[minmax(0,1fr)_380px]">
       <div className="space-y-8">
         <section className="rounded-lg border border-line bg-surface p-6">
           <h2 className="text-base font-semibold text-fg">Contact information</h2>
-          <div className="mt-2 grid gap-x-6 sm:grid-cols-2">
+          <div className="mt-2 grid grid-cols-1 gap-x-6 sm:grid-cols-2">
             <TextField label="Full name" autoComplete="name" value={form.name} onChange={set("name")} error={errors.name} maxLength={50} className="sm:col-span-2" />
             <TextField label="Email" type="email" autoComplete="email" value={form.email ?? user?.email ?? ""} onChange={set("email")} error={errors.email} maxLength={100} />
             <TextField label="Phone number" type="tel" autoComplete="tel" inputMode="tel" value={form.phone} onChange={set("phone")} error={errors.phone} maxLength={20} />
@@ -140,7 +140,7 @@ export default function CheckoutView() {
 
         <section className="rounded-lg border border-line bg-surface p-6">
           <h2 className="text-base font-semibold text-fg">Shipping address</h2>
-          <div className="mt-2 grid gap-x-6 sm:grid-cols-2">
+          <div className="mt-2 grid grid-cols-1 gap-x-6 sm:grid-cols-2">
             <TextField label="Street address" autoComplete="street-address" value={form.address} onChange={set("address")} error={errors.address} maxLength={200} className="sm:col-span-2" />
             <TextField label="City" autoComplete="address-level2" value={form.city} onChange={set("city")} error={errors.city} maxLength={60} />
             <TextField label="Postal code (optional)" autoComplete="postal-code" value={form.postalCode} onChange={set("postalCode")} error={errors.postalCode} maxLength={10} />

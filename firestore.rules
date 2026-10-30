@@ -7,7 +7,7 @@ service cloud.firestore {
       allow read: if request.auth != null && request.auth.uid == uid;
       allow create: if request.auth != null
         && request.auth.uid == uid
-        && request.resource.data.keys().hasOnly(['email', 'firstName', 'lastName', 'birthdate', 'termsAcceptedAt', 'createdAt'])
+        && request.resource.data.keys().hasOnly(['email', 'firstName', 'lastName', 'birthdate', 'createdAt'])
         && request.resource.data.firstName is string && request.resource.data.firstName.size() <= 50
         && request.resource.data.lastName is string && request.resource.data.lastName.size() <= 50;
       allow update, delete: if false;

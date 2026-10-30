@@ -6,8 +6,6 @@ export const navLinks = [
 ];
 export const moreLinks = [
   { label: "FAQ", href: "/#faq" },
-  { label: "Terms", href: "/terms" },
-  { label: "Privacy", href: "/privacy" },
 ];
 
 export const features = [
@@ -34,8 +32,6 @@ export const footerCols = [
   ] },
   { title: "Help", links: [
     { label: "FAQ", href: "/#faq" },
-    { label: "Terms & Conditions", href: "/terms" },
-    { label: "Privacy Policy", href: "/privacy" },
     { label: "Your Bag", href: "/bag" },
   ] },
 ];

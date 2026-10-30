@@ -31,7 +31,7 @@ export default function BagView() {
   }
 
   return (
-    <div className="mt-10 grid gap-8 lg:grid-cols-[1fr_340px]">
+    <div className="mt-10 grid grid-cols-1 gap-8 lg:grid-cols-[minmax(0,1fr)_340px]">
       <ul className="divide-y divide-line rounded-lg border border-line bg-surface">
         {items.map(({ card, size, qty, unit }) => (
           <li key={`${card.id}|${size ?? ""}`} className="flex gap-4 p-4">

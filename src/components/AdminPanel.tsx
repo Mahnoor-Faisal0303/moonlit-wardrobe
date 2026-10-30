@@ -66,7 +66,7 @@ export default function AdminPanel() {
       {(userId) => (
         <>
           <p className="mt-4 text-sm text-muted">Add new items with their details and photos.</p>
-          <div className="mt-8 grid gap-10 lg:grid-cols-[minmax(0,1fr)_420px]">
+          <div className="mt-8 grid grid-cols-1 gap-10 lg:grid-cols-[minmax(0,1fr)_420px]">
             <AddItemForm userId={userId} />
             <ManageItems />
           </div>
@@ -185,7 +185,7 @@ function AddItemForm({ userId }: { userId: string }) {
     <form onSubmit={onSubmit} noValidate className="rounded-lg border border-line bg-surface p-6">
       <h2 className="text-lg font-semibold">Add a new item</h2>
 
-      <div className="mt-4 grid gap-x-6 sm:grid-cols-2">
+      <div className="mt-4 grid grid-cols-1 gap-x-6 sm:grid-cols-2">
         <TextField label="Item name" value={form.name} onChange={set("name")} className="sm:col-span-2" maxLength={80} />
         <SelectField label="Category" value={form.category} onChange={setCategory} className="mb-5">
           {exploreTabs.map((t) => <option key={t} value={t} className="bg-base">{t}</option>)}
@@ -248,7 +248,7 @@ function AddItemForm({ userId }: { userId: string }) {
         <ul className="mt-3 space-y-4">
           {form.pieces.map((p, i) => (
             <li key={i} className="rounded-md bg-surface-strong/40 p-3">
-              <div className="grid gap-x-4 sm:grid-cols-2">
+              <div className="grid grid-cols-1 gap-x-4 sm:grid-cols-2">
                 <TextField label="Piece (e.g. Shirt)" value={p.name} onChange={setPiece(i, "name")} maxLength={30} />
                 <TextField label="Length (e.g. 3m)" value={p.length} onChange={setPiece(i, "length")} maxLength={20} />
                 <TextField label="Fabric" value={p.fabric} onChange={setPiece(i, "fabric")} maxLength={40} />

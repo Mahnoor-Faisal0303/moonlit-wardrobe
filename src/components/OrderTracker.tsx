@@ -43,7 +43,7 @@ export default function OrderTracker({ id }: { id: string }) {
         {order.createdAt && <span className="text-xs text-muted">Placed on {order.createdAt.toLocaleDateString(undefined, { dateStyle: "long" })}</span>}
       </div>
 
-      <div className="mt-6 grid gap-8 lg:grid-cols-[340px_1fr]">
+      <div className="mt-6 grid grid-cols-1 gap-8 lg:grid-cols-[340px_minmax(0,1fr)]">
         <section className="h-fit rounded-lg border border-line bg-surface p-6">
           <h3 className="mb-5 text-base font-semibold text-fg">Order status</h3>
           <OrderTimeline order={order} />

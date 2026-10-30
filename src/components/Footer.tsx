@@ -29,7 +29,10 @@ export default function Footer() {
         ))}
         <div>
           <h5 className="text-xs font-semibold">Contact</h5>
-          <ul className="mt-3 space-y-2 text-[10px] text-muted"><li>+012 3456789</li><li>hello@moonlitwardrobe.com</li></ul>
+          <ul className="mt-3 space-y-2 text-[10px] text-muted">
+            <li><a href="tel:03198972882" className="hover:text-fg">0319 8972882</a></li>
+            <li><a href="mailto:faisalmahnoor86@gmail.com" className="break-all hover:text-fg">faisalmahnoor86@gmail.com</a></li>
+          </ul>
           <div className="mt-4 flex gap-4 text-muted">{socials.map((s) => <a key={s} href="#" aria-label={s} className="flex h-5 w-5 items-center justify-center rounded bg-surface-strong text-[9px] uppercase hover:text-fg">{s[0]}</a>)}</div>
         </div>
       </div>
