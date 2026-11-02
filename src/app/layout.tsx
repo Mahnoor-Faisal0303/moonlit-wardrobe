@@ -4,6 +4,7 @@ import AuthProvider from "@/components/AuthProvider";
 import CartDrawer from "@/components/CartDrawer";
 import { CartProvider } from "@/components/CartProvider";
 import { ItemsProvider } from "@/components/ItemsProvider";
+import WhatsAppButton from "@/components/WhatsAppButton";
 import "./globals.css";
 
 const poppins = Poppins({
@@ -25,7 +26,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
       <head>
         <script dangerouslySetInnerHTML={{ __html: themeScript }} />
       </head>
-      <body className="min-h-full flex flex-col"><AuthProvider><ItemsProvider><CartProvider>{children}<CartDrawer /></CartProvider></ItemsProvider></AuthProvider></body>
+      <body className="min-h-full flex flex-col"><AuthProvider><ItemsProvider><CartProvider>{children}<CartDrawer /></CartProvider></ItemsProvider></AuthProvider><WhatsAppButton /></body>
     </html>
   );
 }

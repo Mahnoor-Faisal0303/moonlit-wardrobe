@@ -195,3 +195,6 @@ export function getItemDetails(item: Pick<Item, "category" | "fabric" | "colour"
 }
 
 export const socials = ["youtube", "discord", "instagram"] as const;
+
+/** WhatsApp number in international format without "+" (0346 8263572 in Pakistan). Used for the chat button on every page. */
+export const WHATSAPP_NUMBER = "923468263572";
