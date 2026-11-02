@@ -1,3 +1,4 @@
+import nodemailer from "nodemailer";
 import { PROGRESS_STEPS, orderNumber } from "@/lib/orders";
 
 // Emails the customer about their order's current status. Only a signed-in admin can call it.
@@ -24,7 +25,10 @@ const MESSAGES: Record<string, { subject: string; text: string }> = {
 
 export async function POST(request: Request) {
   if (!API_KEY || !PROJECT_ID) return reply(503, "Firebase is not configured on the server.");
-  if (!process.env.RESEND_API_KEY) return reply(503, "Email is not set up. Add RESEND_API_KEY to the environment variables.");
+  const { GMAIL_USER, GMAIL_APP_PASSWORD } = process.env;
+  if (!GMAIL_USER || !GMAIL_APP_PASSWORD) {
+    return reply(503, "Email is not set up. Add GMAIL_USER and GMAIL_APP_PASSWORD to the environment variables.");
+  }
 
   const token = request.headers.get("authorization")?.replace(/^Bearer /i, "");
   const body = (await request.json().catch(() => null)) as { orderId?: unknown } | null;
@@ -60,14 +64,22 @@ export async function POST(request: Request) {
   const number = orderNumber(orderId);
   const step = PROGRESS_STEPS.find((s) => s.status === status)?.label ?? status;
 
-  const send = await fetch("https://api.resend.com/emails", {
-    method: "POST",
-    headers: { Authorization: `Bearer ${process.env.RESEND_API_KEY}`, "Content-Type": "application/json" },
-    body: JSON.stringify({
-      from: process.env.RESEND_FROM ?? "Moonlit Wardrobe <onboarding@resend.dev>",
+  // Sent through the shop's Gmail account with an App Password (Google Account > Security > App passwords).
+  const transporter = nodemailer.createTransport({ service: "gmail", auth: { user: GMAIL_USER, pass: GMAIL_APP_PASSWORD.replace(/\s/g, "") } });
+  try {
+    await transporter.sendMail({
+      from: `Moonlit Wardrobe <${GMAIL_USER}>`,
       to: email,
       subject: `Your order ${number} ${message.subject}`,
-      text: `Hi ${name},\n\n${message.text}\n\nOrder: ${number}\nStatus: ${step}\nTrack your order: ${link}\n\nMoonlit Wardrobe`,
+      text: `Hi ${name},
+
+${message.text}
+
+Order: ${number}
+Status: ${step}
+Track your order: ${link}
+
+Moonlit Wardrobe`,
       html: `<div style="font-family:Arial,sans-serif;max-width:480px;margin:auto;color:#222">
         <h2 style="color:#5b3fd1">Moonlit Wardrobe</h2>
         <p>Hi ${escapeHtml(name)},</p>
@@ -75,13 +87,12 @@ export async function POST(request: Request) {
         <p><strong>Order:</strong> ${number}<br><strong>Status:</strong> ${escapeHtml(step)}</p>
         <p><a href="${link}" style="display:inline-block;background:#5b3fd1;color:#fff;padding:10px 18px;border-radius:6px;text-decoration:none">Track your order</a></p>
       </div>`,
-    }),
-  });
-  if (!send.ok) {
-    // Resend explains the refusal (e.g. the sender domain is not verified, or only the account's own address is allowed).
-    const detail = ((await send.json().catch(() => null)) as { message?: string } | null)?.message;
-    console.error("Resend refused the order email:", send.status, detail);
-    return reply(502, `Resend refused the email${detail ? `: ${detail}` : "."}`);
+    });
+  } catch (err) {
+    const detail = err instanceof Error ? err.message : "";
+    console.error("Could not send the order email:", detail);
+    const badLogin = /Invalid login|Username and Password not accepted|EAUTH/i.test(detail);
+    return reply(502, badLogin ? "Gmail refused the login. Check GMAIL_USER and that GMAIL_APP_PASSWORD is an App Password." : `The email could not be sent${detail ? `: ${detail}` : "."}`);
   }
 
   return Response.json({ sent: true, to: email });
