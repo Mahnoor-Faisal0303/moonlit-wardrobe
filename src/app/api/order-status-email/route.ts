@@ -77,7 +77,12 @@ export async function POST(request: Request) {
       </div>`,
     }),
   });
-  if (!send.ok) return reply(502, "The email service refused the message. Check RESEND_API_KEY and the sender address.");
+  if (!send.ok) {
+    // Resend explains the refusal (e.g. the sender domain is not verified, or only the account's own address is allowed).
+    const detail = ((await send.json().catch(() => null)) as { message?: string } | null)?.message;
+    console.error("Resend refused the order email:", send.status, detail);
+    return reply(502, `Resend refused the email${detail ? `: ${detail}` : "."}`);
+  }
 
   return Response.json({ sent: true, to: email });
 }
