@@ -43,6 +43,7 @@ const fromDoc = (id: string, d: DocumentData): Item => ({
   // Only the small cover is on the item document; the full gallery is loaded on the item page.
   images: typeof d.cover === "string" ? [d.cover] : [],
   photos: Array.isArray(d.photos) ? d.photos.filter((x: unknown): x is string => typeof x === "string") : undefined,
+  stock: typeof d.stock === "number" && d.stock >= 0 ? Math.floor(d.stock) : undefined,
   custom: true,
 });
 

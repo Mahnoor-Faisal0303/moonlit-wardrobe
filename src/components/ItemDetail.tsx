@@ -100,7 +100,13 @@ export default function ItemDetail({ id }: { id: string }) {
         </div>
         <p className="mt-3 text-[11px] text-muted">SKU: {sku}</p>
 
-        <AddToBagButton key={card.id} id={card.id} sizes={card.sizes} />
+        {card.stock !== undefined && (
+          <p className={`mt-2 text-xs font-medium ${card.stock === 0 ? "text-danger" : card.stock <= 5 ? "text-accent" : "text-muted"}`}>
+            {card.stock === 0 ? "Out of stock" : card.stock <= 5 ? `Only ${card.stock} left` : "In stock"}
+          </p>
+        )}
+
+        <AddToBagButton key={card.id} id={card.id} sizes={card.sizes} stock={card.stock} />
 
         <ItemDetails {...details} />
       </div>

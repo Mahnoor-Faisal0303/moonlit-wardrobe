@@ -8,7 +8,7 @@ import { useCart } from "./CartProvider";
 import { ButtonLink } from "./ui";
 
 export default function BagView() {
-  const { lines, setQty, remove, clear } = useCart();
+  const { lines, setQty, remove, clear, maxQty } = useCart();
   const { items: catalog, loaded } = useItems();
 
   const items = lines.flatMap((l) => {
@@ -46,7 +46,7 @@ export default function BagView() {
                 <div className="flex items-center rounded-md border border-line text-sm">
                   <button onClick={() => setQty(card.id, size, qty - 1)} aria-label="Decrease quantity" className="px-3 py-1 text-muted hover:text-fg">−</button>
                   <span className="min-w-6 text-center text-fg">{qty}</span>
-                  <button onClick={() => setQty(card.id, size, qty + 1)} aria-label="Increase quantity" className="px-3 py-1 text-muted hover:text-fg">+</button>
+                  <button onClick={() => setQty(card.id, size, qty + 1)} disabled={lines.reduce((n, l) => (l.id === card.id ? n + l.qty : n), 0) >= maxQty(card.id)} aria-label="Increase quantity" className="px-3 py-1 text-muted hover:text-fg disabled:cursor-not-allowed disabled:opacity-40">+</button>
                 </div>
                 <button onClick={() => remove(card.id, size)} aria-label={`Remove ${card.name} from bag`} title="Remove" className="rounded-md p-1.5 text-muted transition-colors hover:bg-danger/15 hover:text-danger">
                   <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>

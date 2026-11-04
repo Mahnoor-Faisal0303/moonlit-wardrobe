@@ -1,9 +1,10 @@
 "use client";
 
-import { collection, doc, limit, onSnapshot, orderBy, query, serverTimestamp, updateDoc } from "firebase/firestore";
+import { collection, doc, limit, onSnapshot, orderBy, query, runTransaction, serverTimestamp } from "firebase/firestore";
 import { useEffect, useState } from "react";
 import { formatRs } from "@/data/content";
 import { getDb, getFirebaseAuth } from "@/lib/firebase";
+import { adjustStock, OutOfStockError } from "@/lib/stock";
 import { orderFromDoc, orderNumber, STATUSES, type Order, type Status } from "@/lib/orders";
 import AdminGate from "./AdminGate";
 
@@ -109,10 +110,16 @@ function OrderCard({ order: o }: { order: Order }) {
     setError(null);
     setInfo(null);
     try {
-      await updateDoc(doc(getDb(), "orders", o.id), { status, [`statusTimes.${status}`]: serverTimestamp() });
+      const db = getDb();
+      await runTransaction(db, async (tx) => {
+        // A cancelled order returns its pieces to stock; reopening it takes them out again.
+        if (status === "cancelled" && o.status !== "cancelled") await adjustStock(tx, o.items, 1);
+        else if (o.status === "cancelled" && status !== "cancelled") await adjustStock(tx, o.items, -1);
+        tx.update(doc(db, "orders", o.id), { status, [`statusTimes.${status}`]: serverTimestamp() });
+      });
       if (status !== "pending") await notifyCustomer();
-    } catch {
-      setError("Could not update the status. Try again.");
+    } catch (err) {
+      setError(err instanceof OutOfStockError ? `Can't reopen this order: ${err.message}` : "Could not update the status. Try again.");
     } finally {
       setSaving(false);
     }
