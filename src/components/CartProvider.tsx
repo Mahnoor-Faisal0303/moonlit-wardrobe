@@ -1,5 +1,6 @@
 "use client";
 
+import { useItems } from "./ItemsProvider";
 import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from "react";
 
 /** A line is one item in one size; the same item in two sizes is two lines. */
@@ -18,6 +19,8 @@ type CartContextValue = {
   setQty: (id: string, size: string | undefined, qty: number) => void;
   remove: (id: string, size?: string) => void;
   clear: () => void;
+  /** Most units of an item the customer can have in the bag (Infinity when its stock is not tracked). */
+  maxQty: (id: string) => number;
 };
 
 const STORAGE_KEY = "bag";
@@ -27,6 +30,9 @@ export function CartProvider({ children }: { children: ReactNode }) {
   const [lines, setLines] = useState<CartLine[]>([]);
   const [loaded, setLoaded] = useState(false);
   const [drawerOpen, setDrawerOpen] = useState(false);
+  const { items } = useItems();
+
+  const maxQty = useCallback((id: string) => items.find((i) => i.id === id)?.stock ?? Infinity, [items]);
 
   useEffect(() => {
     try {
@@ -43,17 +49,27 @@ export function CartProvider({ children }: { children: ReactNode }) {
     } catch {}
   }, [lines, loaded]);
 
+  /** Units of an item across all its sizes, since they share one stock count. */
+  const inBag = (lines: CartLine[], id: string) => lines.reduce((n, l) => (l.id === id ? n + l.qty : n), 0);
+
   const add = useCallback((id: string, size?: string) => {
-    setLines((prev) =>
-      prev.some((l) => isLine(l, id, size))
+    setLines((prev) => {
+      if (inBag(prev, id) >= maxQty(id)) return prev;
+      return prev.some((l) => isLine(l, id, size))
         ? prev.map((l) => (isLine(l, id, size) ? { ...l, qty: l.qty + 1 } : l))
-        : [...prev, { id, ...(size ? { size } : {}), qty: 1 }],
-    );
-  }, []);
+        : [...prev, { id, ...(size ? { size } : {}), qty: 1 }];
+    });
+  }, [maxQty]);
 
   const setQty = useCallback((id: string, size: string | undefined, qty: number) => {
-    setLines((prev) => (qty < 1 ? prev.filter((l) => !isLine(l, id, size)) : prev.map((l) => (isLine(l, id, size) ? { ...l, qty } : l))));
-  }, []);
+    setLines((prev) => {
+      if (qty < 1) return prev.filter((l) => !isLine(l, id, size));
+      const current = prev.find((l) => isLine(l, id, size))?.qty ?? 0;
+      // Other sizes of the same item use up part of the stock too.
+      const allowed = Math.max(current, maxQty(id) - (inBag(prev, id) - current));
+      return prev.map((l) => (isLine(l, id, size) ? { ...l, qty: Math.min(qty, allowed) } : l));
+    });
+  }, [maxQty]);
 
   const remove = useCallback((id: string, size?: string) => setLines((prev) => prev.filter((l) => !isLine(l, id, size))), []);
   const clear = useCallback(() => setLines([]), []);
@@ -61,8 +77,8 @@ export function CartProvider({ children }: { children: ReactNode }) {
   const closeDrawer = useCallback(() => setDrawerOpen(false), []);
 
   const value = useMemo(
-    () => ({ lines, count: lines.reduce((n, l) => n + l.qty, 0), drawerOpen, openDrawer, closeDrawer, add, setQty, remove, clear }),
-    [lines, drawerOpen, openDrawer, closeDrawer, add, setQty, remove, clear],
+    () => ({ lines, count: lines.reduce((n, l) => n + l.qty, 0), drawerOpen, openDrawer, closeDrawer, add, setQty, remove, clear, maxQty }),
+    [lines, drawerOpen, openDrawer, closeDrawer, add, setQty, remove, clear, maxQty],
   );
 
   return <CartContext.Provider value={value}>{children}</CartContext.Provider>;

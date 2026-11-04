@@ -1,24 +1,19 @@
 "use client";
 
-import { collection, doc, getDocs, serverTimestamp, writeBatch } from "firebase/firestore";
+import { collection, doc, getDocs, serverTimestamp, updateDoc, writeBatch } from "firebase/firestore";
 import Image from "next/image";
 import Link from "next/link";
 import { useEffect, useMemo, useState, type FormEvent } from "react";
 import { DEFAULT_NOTE, exploreTabs, getDefaultPieces, SIZE_PRESETS, type Item } from "@/data/content";
 import { getDb } from "@/lib/firebase";
-import { compressImage } from "@/lib/image-compress";
+import { uploadPhoto } from "@/lib/cloudinary";
 import AdminGate from "./AdminGate";
 import { SelectField, TextField } from "./fields";
 import { useItems } from "./ItemsProvider";
 import { Button } from "./ui";
 
-// Photos are shrunk in the browser and stored in Firestore, so there is a per-item limit.
 const MAX_IMAGES = 4;
-const MAX_IMAGE_BYTES = 15 * 1024 * 1024; // size of the original file before compression
-const PHOTO_MAX_SIDE = 2000;
-const PHOTO_MAX_CHARS = 700_000; // ~520 KB per photo; each photo is its own Firestore document (max 1 MiB)
-const COVER_MAX_SIDE = 1000;
-const COVER_MAX_CHARS = 240_000; // the cover sits on the item document, which is loaded for every list
+const MAX_IMAGE_BYTES = 10 * 1024 * 1024; // Cloudinary's free plan accepts photos up to 10 MB
 
 type PieceForm = { name: string; length: string; fabric: string; colour: string };
 
@@ -32,6 +27,7 @@ type Form = {
   category: string;
   price: string;
   discountedPrice: string;
+  stock: string;
   fabric: string;
   colour: string;
   description: string;
@@ -45,7 +41,10 @@ type Form = {
   note: string;
 };
 
-const emptyForm: Form = { name: "", category: exploreTabs[0], price: "", discountedPrice: "", fabric: "", colour: "", description: "", stitching: "auto", sizes: [], otherSizes: "", pieces: piecesFor(exploreTabs[0]), note: DEFAULT_NOTE };
+const emptyForm: Form = { name: "", category: exploreTabs[0], price: "", discountedPrice: "", stock: "", fabric: "", colour: "", description: "", stitching: "auto", sizes: [], otherSizes: "", pieces: piecesFor(exploreTabs[0]), note: DEFAULT_NOTE };
+
+const MAX_STOCK = 100000;
+const isStockValue = (v: string) => /^\d+$/.test(v.trim()) && Number(v) <= MAX_STOCK;
 
 function validate(f: Form, files: File[]): string | null {
   if (!f.name.trim()) return "Enter the item name.";
@@ -56,6 +55,7 @@ function validate(f: Form, files: File[]): string | null {
     if (!Number.isFinite(d) || d <= 0) return "Enter a valid discounted price, or leave it empty.";
     if (d >= price) return "The discounted price must be lower than the price.";
   }
+  if (!isStockValue(f.stock)) return "Enter how many are in stock (a whole number, 0 or more).";
   if (files.length === 0) return "Add at least one photo.";
   return null;
 }
@@ -108,7 +108,7 @@ function AddItemForm({ userId }: { userId: string }) {
     if (!list) return;
     const picked = Array.from(list);
     const bad = picked.find((f) => !f.type.startsWith("image/") || f.size > MAX_IMAGE_BYTES);
-    if (bad) return setError(`"${bad.name}" must be an image under 15 MB.`);
+    if (bad) return setError(`"${bad.name}" must be an image under 10 MB.`);
     if (files.length + picked.length > MAX_IMAGES) return setError(`You can add up to ${MAX_IMAGES} photos.`);
     setError(null);
     setFiles((prev) => [...prev, ...picked]);
@@ -126,13 +126,12 @@ function AddItemForm({ userId }: { userId: string }) {
       const db = getDb();
       const itemRef = doc(collection(db, "items"));
 
-      // Shrink every photo so it fits in a Firestore document, plus a small cover for the item lists.
+      // Photos go to Cloudinary at their original quality; only their URLs are saved with the item.
       const photos: string[] = [];
       for (let i = 0; i < files.length; i++) {
-        setProgress(`Processing photo ${i + 1} of ${files.length}…`);
-        photos.push(await compressImage(files[i], PHOTO_MAX_SIDE, PHOTO_MAX_CHARS));
+        setProgress(`Uploading photo ${i + 1} of ${files.length}…`);
+        photos.push(await uploadPhoto(files[i]));
       }
-      const cover = await compressImage(files[0], COVER_MAX_SIDE, COVER_MAX_CHARS);
 
       setProgress("Saving…");
       const sizes = [...form.sizes, ...form.otherSizes.split(",").map((x) => x.trim())]
@@ -144,6 +143,7 @@ function AddItemForm({ userId }: { userId: string }) {
         category: form.category,
         price: Number(form.price),
         ...(form.discountedPrice ? { discountedPrice: Number(form.discountedPrice) } : {}),
+        stock: Number(form.stock),
         fabric: form.fabric.trim(),
         colour: form.colour.trim(),
         description: form.description.trim(),
@@ -153,12 +153,12 @@ function AddItemForm({ userId }: { userId: string }) {
           .map((p) => ({ name: p.name.trim(), length: p.length.trim(), fabric: p.fabric.trim(), colour: p.colour.trim() }))
           .filter((p) => p.name || p.length || p.fabric || p.colour),
         note: form.note.trim(),
-        cover,
+        cover: photos[0],
+        photos,
         photoCount: photos.length,
         createdBy: userId,
         createdAt: serverTimestamp(),
       });
-      photos.forEach((data, index) => batch.set(doc(itemRef, "photos", String(index)), { index, data }));
       await batch.commit();
       setSuccess(`"${form.name.trim()}" was added.`);
       setForm(emptyForm);
@@ -193,6 +193,7 @@ function AddItemForm({ userId }: { userId: string }) {
         <div />
         <TextField label="Price (Rs.)" type="number" min="0" inputMode="decimal" value={form.price} onChange={set("price")} />
         <TextField label="Discounted price (optional)" type="number" min="0" inputMode="decimal" value={form.discountedPrice} onChange={set("discountedPrice")} />
+        <TextField label="Units in stock" type="number" min="0" step="1" inputMode="numeric" value={form.stock} onChange={set("stock")} className="sm:col-span-2" />
         <TextField label="Fabric (optional)" value={form.fabric} onChange={set("fabric")} maxLength={40} />
         <TextField label="Colour (optional)" value={form.colour} onChange={set("colour")} maxLength={40} />
       </div>
@@ -357,6 +358,7 @@ function ManageItems() {
                 <Link href={`/explore/${item.id}`} className="block truncate text-sm font-medium text-fg hover:text-accent">{item.name}</Link>
                 <span className="text-[11px] text-muted">{item.category} · Rs. {item.discountedPrice ?? item.price}</span>
               </div>
+              <StockEditor item={item} onError={setError} />
               <button
                 onClick={() => remove(item)}
                 disabled={busyId === item.id}
@@ -373,5 +375,50 @@ function ManageItems() {
         </ul>
       )}
     </section>
+  );
+}
+
+/** Shows an item's stock and lets the admin set a new count. Items without a count are unlimited until one is set. */
+function StockEditor({ item, onError }: { item: Item; onError: (message: string | null) => void }) {
+  const live = item.stock === undefined ? "" : String(item.stock);
+  // While nothing is being typed the box follows the live count, which also drops as customers order.
+  const [draft, setDraft] = useState<string | null>(null);
+  const [saving, setSaving] = useState(false);
+  const value = draft ?? live;
+  const changed = value !== live;
+
+  async function save() {
+    if (!isStockValue(value)) return onError("Stock must be a whole number, 0 or more.");
+    onError(null);
+    setSaving(true);
+    try {
+      await updateDoc(doc(getDb(), "items", item.id), { stock: Number(value) });
+      setDraft(null);
+    } catch {
+      onError("Could not update the stock. Try again.");
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  return (
+    <div className="flex shrink-0 flex-col items-end gap-1">
+      <label className="flex items-center gap-1 text-[11px] text-muted">
+        Stock
+        <input
+          type="number"
+          min="0"
+          step="1"
+          inputMode="numeric"
+          value={value}
+          placeholder="∞"
+          onChange={(e) => setDraft(e.target.value)}
+          className={`w-16 rounded border bg-transparent px-1.5 py-1 text-right text-xs text-fg outline-none focus:border-primary ${item.stock === 0 ? "border-danger" : "border-line"}`}
+        />
+      </label>
+      {changed && (
+        <button onClick={save} disabled={saving} className="text-[11px] text-accent hover:underline disabled:opacity-50">{saving ? "Saving…" : "Save"}</button>
+      )}
+    </div>
   );
 }

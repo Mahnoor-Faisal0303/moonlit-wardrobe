@@ -14,7 +14,6 @@ import { AuthCard, FormError } from "./auth-ui";
 import { SelectField, TextField } from "./fields";
 import PasswordField from "./PasswordField";
 import PasswordStrength from "./PasswordStrength";
-import SocialButtons from "./SocialButtons";
 import { Button } from "./ui";
 
 const months = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
@@ -180,9 +179,6 @@ export default function SignUpForm() {
       <Button type="submit" loading={busy} className="min-h-12 w-full rounded-full !bg-gradient-to-r !from-primary !to-[#9333ea] !text-base">
         {busy ? "Creating account…" : "Create Account"}
       </Button>
-
-      <p className="my-8 text-center text-sm">Or</p>
-      <SocialButtons onError={setFormError} />
     </AuthCard>
   );
 }

@@ -1,4 +1,5 @@
 import nodemailer from "nodemailer";
+import { FIRESTORE, verifyAdmin } from "@/lib/admin-auth";
 import { PROGRESS_STEPS, orderNumber } from "@/lib/orders";
 
 // Emails the customer about their order's current status. Only a signed-in admin can call it.
@@ -6,10 +7,6 @@ import { PROGRESS_STEPS, orderNumber } from "@/lib/orders";
 // No service-account key is needed: the admin's own Firebase ID token is used to check that they are
 // an admin and to read the order, so the Firestore rules decide what is allowed. The status in the email
 // always comes from the order in the database, never from the request.
-
-const API_KEY = process.env.NEXT_PUBLIC_FIREBASE_API_KEY;
-const PROJECT_ID = process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID;
-const FIRESTORE = `https://firestore.googleapis.com/v1/projects/${PROJECT_ID}/databases/(default)/documents`;
 
 type Fields = Record<string, { stringValue?: string; mapValue?: { fields: Fields } }>;
 
@@ -24,29 +21,18 @@ const MESSAGES: Record<string, { subject: string; text: string }> = {
 };
 
 export async function POST(request: Request) {
-  if (!API_KEY || !PROJECT_ID) return reply(503, "Firebase is not configured on the server.");
   const { GMAIL_USER, GMAIL_APP_PASSWORD } = process.env;
   if (!GMAIL_USER || !GMAIL_APP_PASSWORD) {
     return reply(503, "Email is not set up. Add GMAIL_USER and GMAIL_APP_PASSWORD to the environment variables.");
   }
 
-  const token = request.headers.get("authorization")?.replace(/^Bearer /i, "");
   const body = (await request.json().catch(() => null)) as { orderId?: unknown } | null;
   const orderId = typeof body?.orderId === "string" && /^[A-Za-z0-9]{20}$/.test(body.orderId) ? body.orderId : null;
-  if (!token || !orderId) return reply(400, "Invalid request.");
+  if (!orderId) return reply(400, "Invalid request.");
 
-  // Who is calling?
-  const lookup = await fetch(`https://identitytoolkit.googleapis.com/v1/accounts:lookup?key=${API_KEY}`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ idToken: token }),
-  });
-  const uid = lookup.ok ? ((await lookup.json()) as { users?: { localId: string }[] }).users?.[0]?.localId : undefined;
-  if (!uid) return reply(401, "Please sign in again.");
-
-  // Are they an admin? (A user can read only their own admins/{uid} document, so this proves it.)
-  const adminDoc = await fetch(`${FIRESTORE}/admins/${uid}`, { headers: { Authorization: `Bearer ${token}` } });
-  if (!adminDoc.ok) return reply(403, "Only admins can send order emails.");
+  const admin = await verifyAdmin(request);
+  if (!admin.ok) return reply(admin.status, admin.error);
+  const token = admin.token;
 
   const orderDoc = await fetch(`${FIRESTORE}/orders/${orderId}`, { headers: { Authorization: `Bearer ${token}` }, cache: "no-store" });
   if (!orderDoc.ok) return reply(404, "Order not found.");

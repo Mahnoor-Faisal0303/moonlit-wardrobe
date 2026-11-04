@@ -38,11 +38,12 @@ export default function ItemDetail({ id }: { id: string }) {
   const { items, loaded } = useItems();
   const card = items.find((c) => c.id === id);
   const isCustom = !!card?.custom;
+  const hasCloudPhotos = !!card?.photos?.length;
   const [gallery, setGallery] = useState<{ id: string; urls: string[] } | null>(null);
 
   // Admin-added items keep their full photos in a subcollection; show the cover until they arrive.
   useEffect(() => {
-    if (!isCustom || !isFirebaseConfigured) return;
+    if (!isCustom || hasCloudPhotos || !isFirebaseConfigured) return;
     let cancelled = false;
     getDocs(query(collection(getDb(), "items", id, "photos"), orderBy("index")))
       .then((snap) => {
@@ -53,7 +54,7 @@ export default function ItemDetail({ id }: { id: string }) {
     return () => {
       cancelled = true;
     };
-  }, [id, isCustom]);
+  }, [id, isCustom, hasCloudPhotos]);
 
   if (!card) {
     if (!loaded) return <ItemSkeleton />;
@@ -72,7 +73,7 @@ export default function ItemDetail({ id }: { id: string }) {
     ? `MW-${card.id.slice(0, 6).toUpperCase()}`
     : `MW${card.category.replace(/\s/g, "").toUpperCase()}${String(Number(card.id) + 1).padStart(3, "0")}`;
 
-  const sources = gallery?.id === id ? gallery.urls : card.images;
+  const sources = card.photos?.length ? card.photos : gallery?.id === id ? gallery.urls : card.images;
   const photos = sources.length
     ? sources.map((src) => ({ src, fit: "object-cover object-top" }))
     : SAMPLE_CROPS.map((fit) => ({ src: PLACEHOLDER_IMAGE, fit }));
@@ -99,7 +100,13 @@ export default function ItemDetail({ id }: { id: string }) {
         </div>
         <p className="mt-3 text-[11px] text-muted">SKU: {sku}</p>
 
-        <AddToBagButton key={card.id} id={card.id} sizes={card.sizes} />
+        {card.stock !== undefined && (
+          <p className={`mt-2 text-xs font-medium ${card.stock === 0 ? "text-danger" : card.stock <= 5 ? "text-accent" : "text-muted"}`}>
+            {card.stock === 0 ? "Out of stock" : card.stock <= 5 ? `Only ${card.stock} left` : "In stock"}
+          </p>
+        )}
+
+        <AddToBagButton key={card.id} id={card.id} sizes={card.sizes} stock={card.stock} />
 
         <ItemDetails {...details} />
       </div>

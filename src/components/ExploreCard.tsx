@@ -11,15 +11,17 @@ type ExploreCardProps = {
   discountedPrice?: string;
   description: string;
   images?: string[];
+  stock?: number;
 };
 
-export default function ExploreCard({ id, name, category, price, discountedPrice, description, images }: ExploreCardProps) {
+export default function ExploreCard({ id, name, category, price, discountedPrice, description, images, stock }: ExploreCardProps) {
   const discountPercent = getDiscountPercent(price, discountedPrice);
   return (
     <Link href={`/explore/${id}`} className="block">
     <article className="cursor-pointer overflow-hidden rounded-lg border border-line bg-surface shadow-card transition-all duration-300 ease-out hover:z-10 hover:scale-105 hover:border-primary hover:shadow-2xl">
       <div className="relative aspect-[624/756]">
         <Image src={images?.[0] ?? PLACEHOLDER_IMAGE} alt={name} fill sizes="(min-width: 1024px) 33vw, (min-width: 640px) 50vw, 100vw" className="object-cover object-top" />
+        {stock === 0 && <span className="absolute left-3 top-3 rounded bg-black/70 px-2 py-1 text-[11px] font-semibold uppercase text-white">Out of stock</span>}
       </div>
       <div className="relative flex flex-col items-center px-6 pb-6 text-center">
         <h3 className="mt-5 flex items-center gap-2 text-base font-semibold text-fg">{name} <Verified /></h3>

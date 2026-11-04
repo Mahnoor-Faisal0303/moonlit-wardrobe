@@ -5,8 +5,11 @@ import { useEffect, useState } from "react";
 import { useCart } from "./CartProvider";
 import { Button } from "./ui";
 
-export default function AddToBagButton({ id, sizes = [] }: { id: string; sizes?: string[] }) {
-  const { add, openDrawer } = useCart();
+export default function AddToBagButton({ id, sizes = [], stock }: { id: string; sizes?: string[]; stock?: number }) {
+  const { add, openDrawer, lines } = useCart();
+  const inBag = lines.reduce((n, l) => (l.id === id ? n + l.qty : n), 0);
+  const soldOut = stock !== undefined && stock <= 0;
+  const maxedOut = stock !== undefined && !soldOut && inBag >= stock;
   const [added, setAdded] = useState(false);
   const [size, setSize] = useState<string | null>(sizes.length === 1 ? sizes[0] : null);
   const [needSize, setNeedSize] = useState(false);
@@ -45,6 +48,7 @@ export default function AddToBagButton({ id, sizes = [] }: { id: string; sizes?:
         </div>
       )}
       <Button
+        disabled={soldOut || maxedOut}
         onClick={() => {
           if (sizes.length > 0 && !size) return setNeedSize(true);
           add(id, size ?? undefined);
@@ -53,7 +57,7 @@ export default function AddToBagButton({ id, sizes = [] }: { id: string; sizes?:
         }}
         className="w-full !py-4 text-sm font-semibold tracking-wider"
       >
-        {added ? "ADDED ✓" : "ADD TO BAG"}
+        {soldOut ? "OUT OF STOCK" : maxedOut ? "ALL AVAILABLE IN YOUR BAG" : added ? "ADDED ✓" : "ADD TO BAG"}
       </Button>
       <p aria-live="polite" className="mt-2 h-4 text-xs text-accent">
         {added && (

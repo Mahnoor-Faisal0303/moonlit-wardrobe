@@ -154,6 +154,10 @@ export type Item = {
   images: string[];
   /** True for items an admin added through the admin panel. */
   custom?: boolean;
+  /** Units in stock. Missing means unlimited (built-in items and items added before stock tracking). */
+  stock?: number;
+  /** Full-size photo URLs (Cloudinary). Older items have none; their photos are loaded from Firestore. */
+  photos?: string[];
 };
 
 export const PLACEHOLDER_IMAGE = "/items/suit.png";

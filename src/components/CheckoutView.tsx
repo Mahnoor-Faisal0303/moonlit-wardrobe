@@ -1,12 +1,13 @@
 "use client";
 
-import { addDoc, collection, serverTimestamp } from "firebase/firestore";
+import { collection, doc, runTransaction, serverTimestamp } from "firebase/firestore";
 import Image from "next/image";
 import Link from "next/link";
 import { useState, type FormEvent } from "react";
 import { formatRs, PLACEHOLDER_IMAGE, priceToNumber } from "@/data/content";
 import { getDb, isFirebaseConfigured, NOT_CONFIGURED_MESSAGE } from "@/lib/firebase";
 import { orderNumber } from "@/lib/orders";
+import { adjustStock, OutOfStockError } from "@/lib/stock";
 import { validateEmail, validateName, validatePhone, validateRequired } from "@/lib/validation";
 import { useAuth } from "./AuthProvider";
 import { useCart } from "./CartProvider";
@@ -67,25 +68,34 @@ export default function CheckoutView() {
     setSubmitError(null);
     setSaving(true);
     try {
-      const ref = await addDoc(collection(getDb(), "orders"), {
-        // Guests can order too; their order has no user.
-        userId: user?.userId ?? null,
-        contact: { name: trimmed.name, email: trimmed.email, phone: trimmed.phone },
-        shipping: { address: trimmed.address, city: trimmed.city, postalCode: trimmed.postalCode },
-        notes: trimmed.notes,
-        paymentMethod: "cod",
-        items: items.map((i) => ({ id: i.card.id, name: i.card.name, size: i.size ?? "", qty: i.qty, unitPrice: i.unit })),
-        subtotal,
-        status: "pending",
-        statusTimes: { pending: serverTimestamp() },
-        createdAt: serverTimestamp(),
+      const db = getDb();
+      const ref = doc(collection(db, "orders"));
+      const orderItems = items.map((i) => ({ id: i.card.id, name: i.card.name, size: i.size ?? "", qty: i.qty, unitPrice: i.unit }));
+      // Taking the stock and placing the order happen together, so two customers cannot buy the last piece.
+      await runTransaction(db, async (tx) => {
+        await adjustStock(tx, orderItems, -1);
+        tx.set(ref, {
+          // Guests can order too; their order has no user.
+          userId: user?.userId ?? null,
+          contact: { name: trimmed.name, email: trimmed.email, phone: trimmed.phone },
+          shipping: { address: trimmed.address, city: trimmed.city, postalCode: trimmed.postalCode },
+          notes: trimmed.notes,
+          paymentMethod: "cod",
+          items: orderItems,
+          subtotal,
+          status: "pending",
+          statusTimes: { pending: serverTimestamp() },
+          createdAt: serverTimestamp(),
+        });
       });
       setOrderId(ref.id);
       clear();
     } catch (err) {
       const code = (err as { code?: string }).code ?? "";
       setSubmitError(
-        code.includes("permission")
+        err instanceof OutOfStockError
+          ? `${err.message} Please update your bag and try again.`
+          : code.includes("permission")
           ? "We couldn't place your order (permission denied). Publish the latest firestore.rules, then try again."
           : "We couldn't place your order. Check your connection and try again.",
       );
