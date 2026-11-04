@@ -6,19 +6,14 @@ import Link from "next/link";
 import { useEffect, useMemo, useState, type FormEvent } from "react";
 import { DEFAULT_NOTE, exploreTabs, getDefaultPieces, SIZE_PRESETS, type Item } from "@/data/content";
 import { getDb } from "@/lib/firebase";
-import { compressImage } from "@/lib/image-compress";
+import { uploadPhoto } from "@/lib/cloudinary";
 import AdminGate from "./AdminGate";
 import { SelectField, TextField } from "./fields";
 import { useItems } from "./ItemsProvider";
 import { Button } from "./ui";
 
-// Photos are shrunk in the browser and stored in Firestore, so there is a per-item limit.
 const MAX_IMAGES = 4;
-const MAX_IMAGE_BYTES = 15 * 1024 * 1024; // size of the original file before compression
-const PHOTO_MAX_SIDE = 2000;
-const PHOTO_MAX_CHARS = 700_000; // ~520 KB per photo; each photo is its own Firestore document (max 1 MiB)
-const COVER_MAX_SIDE = 1000;
-const COVER_MAX_CHARS = 240_000; // the cover sits on the item document, which is loaded for every list
+const MAX_IMAGE_BYTES = 10 * 1024 * 1024; // Cloudinary's free plan accepts photos up to 10 MB
 
 type PieceForm = { name: string; length: string; fabric: string; colour: string };
 
@@ -108,7 +103,7 @@ function AddItemForm({ userId }: { userId: string }) {
     if (!list) return;
     const picked = Array.from(list);
     const bad = picked.find((f) => !f.type.startsWith("image/") || f.size > MAX_IMAGE_BYTES);
-    if (bad) return setError(`"${bad.name}" must be an image under 15 MB.`);
+    if (bad) return setError(`"${bad.name}" must be an image under 10 MB.`);
     if (files.length + picked.length > MAX_IMAGES) return setError(`You can add up to ${MAX_IMAGES} photos.`);
     setError(null);
     setFiles((prev) => [...prev, ...picked]);
@@ -126,13 +121,12 @@ function AddItemForm({ userId }: { userId: string }) {
       const db = getDb();
       const itemRef = doc(collection(db, "items"));
 
-      // Shrink every photo so it fits in a Firestore document, plus a small cover for the item lists.
+      // Photos go to Cloudinary at their original quality; only their URLs are saved with the item.
       const photos: string[] = [];
       for (let i = 0; i < files.length; i++) {
-        setProgress(`Processing photo ${i + 1} of ${files.length}…`);
-        photos.push(await compressImage(files[i], PHOTO_MAX_SIDE, PHOTO_MAX_CHARS));
+        setProgress(`Uploading photo ${i + 1} of ${files.length}…`);
+        photos.push(await uploadPhoto(files[i]));
       }
-      const cover = await compressImage(files[0], COVER_MAX_SIDE, COVER_MAX_CHARS);
 
       setProgress("Saving…");
       const sizes = [...form.sizes, ...form.otherSizes.split(",").map((x) => x.trim())]
@@ -153,12 +147,12 @@ function AddItemForm({ userId }: { userId: string }) {
           .map((p) => ({ name: p.name.trim(), length: p.length.trim(), fabric: p.fabric.trim(), colour: p.colour.trim() }))
           .filter((p) => p.name || p.length || p.fabric || p.colour),
         note: form.note.trim(),
-        cover,
+        cover: photos[0],
+        photos,
         photoCount: photos.length,
         createdBy: userId,
         createdAt: serverTimestamp(),
       });
-      photos.forEach((data, index) => batch.set(doc(itemRef, "photos", String(index)), { index, data }));
       await batch.commit();
       setSuccess(`"${form.name.trim()}" was added.`);
       setForm(emptyForm);

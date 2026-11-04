@@ -11,7 +11,6 @@ import { useAuth } from "./AuthProvider";
 import { AuthCard, FormError } from "./auth-ui";
 import { TextField } from "./fields";
 import PasswordField from "./PasswordField";
-import SocialButtons from "./SocialButtons";
 import { Button } from "./ui";
 
 export default function SignInForm() {
@@ -107,9 +106,6 @@ export default function SignInForm() {
           {busy ? "Signing in…" : step === "email" ? "Continue" : "Sign In"}
         </Button>
       </div>
-
-      <p className="my-8 text-center text-sm">Or</p>
-      <SocialButtons onError={setFormError} />
     </AuthCard>
   );
 }

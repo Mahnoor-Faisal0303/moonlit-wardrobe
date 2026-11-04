@@ -154,6 +154,8 @@ export type Item = {
   images: string[];
   /** True for items an admin added through the admin panel. */
   custom?: boolean;
+  /** Full-size photo URLs (Cloudinary). Older items have none; their photos are loaded from Firestore. */
+  photos?: string[];
 };
 
 export const PLACEHOLDER_IMAGE = "/items/suit.png";
